@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 回归样例：竖排 y 轴标题（rotate(-90 ...)）贴在画布左边，实际完全没有溢出。
+     早期版本检查器按「横排字宽」估算，会把「响应值」算成往左溢出 1.2mm，每张图表都误报。 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="66.8mm" height="60mm" viewBox="0 0 66.8 60">
+  <rect x="0" y="0" width="66.8" height="60" fill="#ffffff"/>
+  <g transform="rotate(-90 3 26.686)">
+    <text x="3" y="26.686" font-family="Arial, Helvetica, 'PingFang SC', sans-serif"
+          font-size="2.8222" fill="#1a1a1a" text-anchor="middle">响应值</text>
+  </g>
+  <rect x="14" y="26" width="9" height="14" fill="#0072B2"/>
+  <rect x="30" y="18" width="9" height="22" fill="#0072B2"/>
+  <rect x="46" y="14" width="9" height="26" fill="#0072B2"/>
+  <line x1="10" y1="40" x2="62" y2="40" stroke="#4a4a4a" stroke-width="0.3"/>
+  <text x="18.5" y="47" text-anchor="middle" font-family="Arial, Helvetica, 'PingFang SC', sans-serif" font-size="2.8222" fill="#1a1a1a">对照</text>
+  <text x="34.5" y="47" text-anchor="middle" font-family="Arial, Helvetica, 'PingFang SC', sans-serif" font-size="2.8222" fill="#1a1a1a">处理A</text>
+  <text x="50.5" y="47" text-anchor="middle" font-family="Arial, Helvetica, 'PingFang SC', sans-serif" font-size="2.8222" fill="#1a1a1a">处理B</text>
+</svg>

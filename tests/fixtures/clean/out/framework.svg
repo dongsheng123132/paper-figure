@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  tests/fixtures/clean/out/framework.svg
+  一张「本该通过检查」的图：Nature 单栏 89×60mm、字号 7pt（= 2.469 用户单位）、
+  Arial、蓝橙（Okabe-Ito 色盲安全）配色，所有文字都在自己的框里。
+  一旦 check.mjs 对这张图报 error，就是检查器误报，需要修检查器而不是修图。
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="89mm" height="60mm" viewBox="0 0 89 60">
+  <rect x="0" y="0" width="89" height="60" fill="#ffffff"/>
+
+  <rect x="2" y="14" width="24" height="14" rx="1.5" fill="#0072B2"/>
+  <text x="14" y="23" text-anchor="middle" font-family="Arial, Helvetica, PingFang SC, sans-serif"
+        font-size="2.469" fill="#ffffff">输入</text>
+
+  <rect x="34" y="14" width="24" height="14" rx="1.5" fill="#E69F00"/>
+  <text x="46" y="23" text-anchor="middle" font-family="Arial, Helvetica, PingFang SC, sans-serif"
+        font-size="2.469" fill="#000000">编码器</text>
+
+  <rect x="66" y="14" width="21" height="14" rx="1.5" fill="#0072B2"/>
+  <text x="76.5" y="23" text-anchor="middle" font-family="Arial, Helvetica, PingFang SC, sans-serif"
+        font-size="2.469" fill="#ffffff">解码器</text>
+
+  <line x1="26" y1="21" x2="34" y2="21" stroke="#333333" stroke-width="0.4" marker-end="url(#arrow)"/>
+  <line x1="58" y1="21" x2="66" y2="21" stroke="#333333" stroke-width="0.4"/>
+</svg>
