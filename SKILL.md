@@ -1,10 +1,10 @@
 ---
 name: paper-figure
 slug: paper-figure
-displayName: "论文配图"
+displayName: "论文配图 · 可投稿版"
 display_name: "论文配图"
 display_name_en: "Paper Figure"
-version: "1.0.0"
+version: "1.0.1"
 author: "he fangsheng <hefangsheng@gmail.com>"
 license: MIT
 homepage: "https://github.com/u-claw-os/paper-figure"

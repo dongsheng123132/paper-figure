@@ -6,5 +6,5 @@ Thumbs.db
 BRIEF.md
 docs/
 # 本地跑出来的工作区产物
-out/
+/out/
 *.qa.png
