@@ -1,0 +1,10 @@
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+# 内部施工契约与开发方案，留在工作台，不发布到公开仓
+BRIEF.md
+docs/
+# 本地跑出来的工作区产物
+out/
+*.qa.png
