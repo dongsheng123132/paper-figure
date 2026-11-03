@@ -65,7 +65,7 @@ So the order is: **anything expressible deterministically (pipeline / architectu
 Requires **Node >= 18** (built-in fetch is enough). No `npm install`, no Python, no Illustrator.
 
 ```bash
-git clone https://github.com/hfshfg/paper-figure.git
+git clone https://github.com/u-claw-os/paper-figure.git
 cd paper-figure
 node scripts/fig.mjs wallet        # free: shows key source and balance
 ```

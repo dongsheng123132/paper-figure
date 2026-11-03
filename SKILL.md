@@ -7,7 +7,7 @@ display_name_en: "Paper Figure"
 version: "1.0.0"
 author: "he fangsheng <hefangsheng@gmail.com>"
 license: MIT
-homepage: "https://github.com/hfshfg/paper-figure"
+homepage: "https://github.com/u-claw-os/paper-figure"
 tags: [academic-figures, journal-compliance, scientific-visualization]
 description: "可投稿的论文图：把「合规格、不被退稿」变成一条命令。期刊栏宽、最小字号、字体嵌入、色彩模式、300/600/1000 dpi、面板 a/b/c 逐条对着官方作者指南核过（每条带官方 URL 与核实日期）；结构图/流程图/机制图/对比图用代码排成矢量，数据图从你的真 CSV 出；本机免费跑硬校验（尺寸/字号/DPI/文字溢出/色盲），多 AI 低价会审只给「可执行的修改清单」。AI 出图只限概念示意/封面/TOC，并强制标注。当用户说「论文配图」「帮我画个架构图」「画流程图/机制图」「这数据图不好看」「图被期刊退回重画」「做个封面图」「TOC graphic」「答辩 PPT 里的框架图」「基金本子配图」「这张图能投吗」时使用。安装免费，本地渲染/检查/导出不花钱、论文数据不上传；只有 AI 概念图（¥0.03/张）和会审（¥0.01–0.07/轮）从虾盘云钱包按次扣费。"
 description_zh: "可投稿的论文图：期刊栏宽、最小字号、字体嵌入、色彩模式、300/600/1000 dpi 逐条对着官方作者指南核过（带 URL 与核实日期），结构图/流程图/机制图/对比图用代码排成矢量、数据图从真 CSV 出，本机免费硬校验（尺寸/字号/DPI/溢出/色盲），多 AI 会审只给可执行修改清单；AI 只做概念示意/封面/TOC 并强制标注。当用户说「论文配图」「画架构图」「画流程图」「数据图不好看」「被期刊退回重画」「封面图」「TOC graphic」「答辩图」「基金本子配图」时使用。安装免费，本地渲染/检查/导出不花钱、数据不上传；AI 概念图 ¥0.03/张、会审 ¥0.01–0.07/轮，从虾盘云钱包按次扣费。"

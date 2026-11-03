@@ -67,7 +67,7 @@
 要求：**Node ≥ 18**（自带 fetch 就够），**不需要 npm install，不需要 Python，不需要 Illustrator**。
 
 ```bash
-git clone https://github.com/hfshfg/paper-figure.git
+git clone https://github.com/u-claw-os/paper-figure.git
 cd paper-figure
 node scripts/fig.mjs wallet        # 免费：看密钥来源和余额
 ```
