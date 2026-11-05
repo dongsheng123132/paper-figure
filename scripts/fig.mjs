@@ -28,6 +28,7 @@ const HELP = {
     { cmd: 'render <dir>', what: 'figure.json → out/<name>.svg（流程/架构/机制/对比/概念/目录图）', cost: '免费' },
     { cmd: 'chart <dir>', what: 'data/*.csv → 期刊风格图表 SVG（bar/line/scatter/grouped-bar/errorbar）', cost: '免费' },
     { cmd: 'check <dir>', what: '确定性合规检查 → out/check.json + 人话报告', cost: '免费' },
+    { cmd: 'check --file <图>', what: '体检任意一张图（PNG/JPEG/TIFF/PDF/SVG/EPS）：能不能投这本刊', cost: '免费' },
     { cmd: 'export <dir>', what: '按期刊规格导出 png/pdf/tif', cost: '免费' },
     { cmd: 'concept <dir>', what: 'AI 概念示意图（gpt-image-2.5-1k）', cost: '约 ¥0.03/张' },
     { cmd: 'review <dir>', what: '多 AI 会审 → out/review.json', cost: '约 ¥0.01–0.07/轮' },
@@ -262,6 +263,19 @@ function pickSvgPath(dir, flags) {
 }
 
 async function cmdCheck(args) {
+  // `check --file <路径>`：体检任意一张图（别人的 / 别的工具导的 / AI 出的），不需要工作区
+  const fileArg = pickStr(args.flags.file)
+  if (fileArg) {
+    const mod = await loadTool('check', 'checkFile')
+    log(`体检文件 ${fileArg}…`)
+    const r = await mod.checkFile(fileArg, {
+      journal: pickStr(args.flags.journal),
+      toleranceMm: args.flags.tolerance ? Number(args.flags.tolerance) : undefined,
+      maxMB: args.flags['max-mb'] ? Number(args.flags['max-mb']) : undefined,
+    })
+    if (r && typeof r.pass === 'boolean') log(r.pass ? '体检通过（没有必须改的问题）' : '体检没过，下面给出修改建议')
+    return r
+  }
   const dir = resolve(args._[0] || '.')
   const mod = await loadTool('check', 'checkFigure')
   const svgPath = pickSvgPath(dir, args.flags)

@@ -113,6 +113,23 @@ node scripts/fig.mjs concept ./fig1 --n 2         # 只有概念图/封面/TOC �
 
 ---
 
+## 已经有图了？先体检，别重画
+
+合作者发你的 PNG、Origin 导的 PDF、别的工具出的 SVG，都能直接判「能不能投这本刊」：
+
+```bash
+node scripts/fig.mjs check --file ./coauthor-fig.pdf --journal nature
+node scripts/fig.mjs check --file ./figure1.png      --journal ieee
+```
+
+| 类型 | 能查 |
+|---|---|
+| PNG / JPEG / TIFF | 像素尺寸、**文件里写的真实 DPI**（不是文件名写的）、该刊收不收这个格式 |
+| PDF | 物理尺寸（MediaBox）、页数、字体是否嵌入、是不是整页位图 |
+| SVG | 全套深度检查：栏宽、字号上下限、文字溢出、色盲对比、元素越界 |
+
+两条红线会直接判 error：图旁边有 `.ai-generated.json`（AI 生成图冒充数据图）；往只收矢量主图的刊交位图（如 Nature）。
+
 ## 多少钱
 
 | 动作 | 费用 |

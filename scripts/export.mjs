@@ -604,7 +604,10 @@ export async function exportFigure(workDir, opts = {}) {
       const target = join(outDir, `${name}@${dpi}dpi.png`)
       if (chrome) {
         const r = chromeScreenshot(chrome, { htmlPath: htmlPxPath, outPath: target, wPx, hPx, timeoutMs })
-        if (r.ok && existsSync(target)) {
+        // Chrome 157 起偶发「Teardown watchdog expired」：图已经写完但进程退出码异常。
+        // 只要文件在、图能读出来，就按成功处理，并如实记一条 warning。
+        if (existsSync(target) && pngDims(target)) {
+          if (!r.ok) result.warnings.push(`Chrome 退出异常（${r.timedOut ? '超时' : `退出码 ${r.status}`}）但 PNG 已生成，按成功处理；交稿前用 check --file 复核一遍。`)
           const dims = pngDims(target)
           if (dims) {
             const effDpi = dims.w / (widthMm / MM_PER_IN)
@@ -612,12 +615,14 @@ export async function exportFigure(workDir, opts = {}) {
             if (deltaPct > 3) {
               result.warnings.push(`PNG 实际 ${dims.w}×${dims.h}px，目标 ${wPx}×${hPx}px（差 ${round(deltaPct)}%），有效 ${Math.round(effDpi)}dpi。`)
             }
+            const stamped = stampPngDpi(target, dpi)
             pngPath = target
             result.files.push({
               path: target, format: 'png',
               widthPx: dims.w, heightPx: dims.h, dpi: Math.round(effDpi),
-              bytes: dims.bytes, via: `chrome${r.mode === 'compat' ? '(compat)' : ''}`,
-              note: `按 ${round(widthMm)}mm × ${dpi}dpi 换算，实际 ${dims.w}px`
+              bytes: statSync(target).size, via: `chrome${r.mode === 'compat' ? '(compat)' : ''}`,
+              dpi_stamped: stamped,
+              note: `按 ${round(widthMm)}mm × ${dpi}dpi 换算，实际 ${dims.w}px；${stamped ? `已写入 ${dpi}dpi 元数据` : '未能写入 DPI 元数据，交稿前用 check --file 复核'}`
             })
           }
         } else {
@@ -630,10 +635,11 @@ export async function exportFigure(workDir, opts = {}) {
       }
       if (!pngPath && magick) {
         const target2 = join(outDir, `${name}@${dpi}dpi.png`)
-        const r = magickConvert(magick, ['-density', String(dpi), '-background', 'white', '-flatten', svgPath, target2], timeoutMs)
+        const r = magickConvert(magick, ['-background', 'white', '-density', String(dpi), svgPath, '-flatten', target2], timeoutMs)
         if (r.ok && existsSync(target2)) {
           const dims = pngDims(target2)
           const m = probeMagick()
+          stampPngDpi(target2, dpi)
           pngPath = target2
           result.files.push({
             path: target2, format: 'png',
@@ -660,7 +666,8 @@ export async function exportFigure(workDir, opts = {}) {
       let done = false
       if (chrome) {
         const r = chromePdf(chrome, { htmlPath: htmlMmPath, outPath: target, timeoutMs })
-        if (r.ok && existsSync(target)) {
+        if (existsSync(target) && pdfInfo(target) && pdfInfo(target).box) {
+          if (!r.ok) result.warnings.push(`Chrome 退出异常（${r.timedOut ? '超时' : `退出码 ${r.status}`}）但 PDF 已生成，按成功处理。`)
           const info = pdfInfo(target)
           const wantW = mmToPt(widthMm)
           const wantH = mmToPt(heightMm)
@@ -768,6 +775,65 @@ export async function exportFigure(workDir, opts = {}) {
     result.fix = '看 skipped 里每个格式的原因；最常见的是本机没装 Chrome。SVG 本身可以直接交稿，不一定要位图。'
   }
   return result
+}
+
+/* ------------------------------------------------------------------
+ * 给 PNG 补 pHYs（真实 DPI）。
+ * Chrome --screenshot 出的 PNG 不带物理分辨率，期刊和检查器只能按 96dpi 猜，
+ * 结果就是「像素够了，但文件里没写 300dpi」——白白被判不合规。这里补上。
+ * ------------------------------------------------------------------ */
+let CRC_TABLE = null
+function crc32Table() {
+  if (CRC_TABLE) return CRC_TABLE
+  CRC_TABLE = new Uint32Array(256)
+  for (let n = 0; n < 256; n += 1) {
+    let c = n
+    for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+    CRC_TABLE[n] = c >>> 0
+  }
+  return CRC_TABLE
+}
+function crc32(buf) {
+  const table = crc32Table()
+  let c = 0xffffffff
+  for (let i = 0; i < buf.length; i += 1) c = table[(c ^ buf[i]) & 0xff] ^ (c >>> 8)
+  return (c ^ 0xffffffff) >>> 0
+}
+
+/** @returns {boolean} 是否写入成功 */
+function stampPngDpi(filePath, dpi) {
+  try {
+    const buf = readFileSync(filePath)
+    if (buf.length < 33 || buf.readUInt32BE(0) !== 0x89504e47) return false
+    const ppm = Math.round(Number(dpi) / 0.0254)
+    if (!ppm || !Number.isFinite(ppm)) return false
+    const kept = []
+    let off = 8
+    while (off + 12 <= buf.length) {
+      const len = buf.readUInt32BE(off)
+      const type = buf.subarray(off + 4, off + 8).toString('latin1')
+      const end = off + 12 + len
+      if (type !== 'pHYs') kept.push(buf.subarray(off, Math.min(end, buf.length)))
+      off = end
+      if (type === 'IEND') break
+    }
+    if (!kept.length) return false
+    const data = Buffer.alloc(9)
+    data.writeUInt32BE(ppm, 0)
+    data.writeUInt32BE(ppm, 4)
+    data[8] = 1 // 单位：米
+    const typeBuf = Buffer.from('pHYs', 'latin1')
+    const chunk = Buffer.alloc(21)
+    chunk.writeUInt32BE(9, 0)
+    typeBuf.copy(chunk, 4)
+    data.copy(chunk, 8)
+    chunk.writeUInt32BE(crc32(Buffer.concat([typeBuf, data])), 17)
+    const out = Buffer.concat([buf.subarray(0, 8), kept[0], chunk, ...kept.slice(1)])
+    writeFileSync(filePath, out)
+    return true
+  } catch {
+    return false
+  }
 }
 
 function summarizeChromeError(r) {

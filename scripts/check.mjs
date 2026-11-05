@@ -30,7 +30,8 @@
  *   - 每条 issue 都带人话 fix，用户看完能直接动手。
  */
 
-import { existsSync, readFileSync, readdirSync, statSync, mkdirSync, writeFileSync, realpathSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync, mkdirSync, writeFileSync, realpathSync, mkdtempSync, copyFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join, resolve, dirname, basename, isAbsolute } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -1526,6 +1527,431 @@ export async function checkFigure(workDir, opts = {}) {
   }
 
   return result
+}
+
+
+/* ==========================================================================
+ * 八点五、外部文件体检：checkFile(filePath, opts)
+ *
+ * 用途：图不是我们画的也能查 —— 合作者给的 PNG、别的工具导的 PDF、AI 出的图、
+ *       甚至竞品出的 SVG。定位是「投稿前体检」，不是「只查自家产物」。
+ *
+ * 能力边界（写清楚，别骗人）：
+ *   - PNG / JPEG / TIFF：读文件头拿像素尺寸与真实 DPI、文件格式是否被该刊接受；
+ *     位图**查不了**字号、文字溢出、色盲对比 —— 报告里会明说。
+ *   - PDF：读 MediaBox 算物理尺寸、页数、字体是否嵌入、是否整页都是位图。
+ *   - SVG：走完整深度检查（字号/溢出/色盲/越界），跟自家产物同一套尺子。
+ *
+ * code 一览：FILE_NOT_FOUND / FILE_EMPTY / FILE_UNSUPPORTED / FILE_WIDTH_TOO_WIDE /
+ *   FILE_WIDTH_BETWEEN_COLUMNS / FILE_HEIGHT_TOO_TALL / FILE_DPI_BELOW_MIN /
+ *   FILE_DPI_UNDECLARED / FILE_FORMAT_NOT_ACCEPTED / FILE_RASTER_FOR_VECTOR_JOURNAL /
+ *   FILE_PDF_MULTIPLE_PAGES / FILE_PDF_FONT_NOT_EMBEDDED / FILE_PDF_IMAGE_ONLY /
+ *   FILE_TOO_LARGE / FILE_SIZE_UNKNOWN / AI_IMAGE_AS_DATA_FIGURE
+ * ========================================================================== */
+
+const KIND_LABEL = { png: 'PNG 位图', jpeg: 'JPEG 位图', tiff: 'TIFF 位图', pdf: 'PDF 矢量/混合', svg: 'SVG 矢量', eps: 'EPS 矢量', ai: 'AI 矢量', ps: 'PS 矢量' }
+const RASTER_KINDS = ['png', 'jpeg', 'tiff']
+const VECTOR_KINDS = ['pdf', 'svg', 'eps', 'ai', 'ps']
+
+function sniffKind(buf, filePath) {
+  if (buf.length >= 8 && buf.readUInt32BE(0) === 0x89504e47) return 'png'
+  if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'jpeg'
+  if (buf.length >= 4 && (buf.readUInt32BE(0) === 0x49492a00 || buf.readUInt32BE(0) === 0x4d4d002a)) return 'tiff'
+  if (buf.length >= 4 && buf.subarray(0, 4).toString('latin1') === '%PDF') return 'pdf'
+  const head = buf.subarray(0, 1200).toString('utf8').toLowerCase()
+  if (head.includes('<svg')) return 'svg'
+  const ext = (String(filePath).match(/\.([A-Za-z0-9]+)$/) || [])[1]
+  const byExt = ext ? ext.toLowerCase() : ''
+  if (byExt === 'svg') return 'svg'
+  if (byExt === 'pdf') return 'pdf'
+  if (byExt === 'png') return 'png'
+  if (byExt === 'jpg' || byExt === 'jpeg') return 'jpeg'
+  if (byExt === 'tif' || byExt === 'tiff') return 'tiff'
+  if (byExt === 'eps') return 'eps'
+  if (byExt === 'ai') return 'ai'
+  if (byExt === 'ps') return 'ps'
+  return 'unknown'
+}
+
+/** PNG：IHDR 尺寸 + pHYs 物理分辨率（单位=米） */
+function readPngInfo(buf) {
+  let off = 8
+  let widthPx = 0
+  let heightPx = 0
+  let dpiX = null
+  let dpiY = null
+  while (off + 8 <= buf.length) {
+    const len = buf.readUInt32BE(off)
+    const type = buf.subarray(off + 4, off + 8).toString('latin1')
+    const data = off + 8
+    if (type === 'IHDR' && len >= 13) {
+      widthPx = buf.readUInt32BE(data)
+      heightPx = buf.readUInt32BE(data + 4)
+    } else if (type === 'pHYs' && len >= 9) {
+      const ppuX = buf.readUInt32BE(data)
+      const ppuY = buf.readUInt32BE(data + 4)
+      const unit = buf[data + 8]
+      if (unit === 1) {
+        dpiX = Math.round(ppuX * 0.0254)
+        dpiY = Math.round(ppuY * 0.0254)
+      }
+    } else if (type === 'IEND') break
+    off = data + len + 4
+  }
+  return { widthPx, heightPx, dpiX, dpiY, dpiUnit: dpiX ? 'inch' : null }
+}
+
+/** JPEG：JFIF APP0 的密度（dpi/dpcm）+ SOF 像素尺寸 */
+function readJpegInfo(buf) {
+  let widthPx = 0
+  let heightPx = 0
+  let dpiX = null
+  let dpiY = null
+  let dpiUnit = null
+  let i = 2
+  while (i + 4 <= buf.length) {
+    if (buf[i] !== 0xff) { i += 1; continue }
+    const marker = buf[i + 1]
+    if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { i += 2; continue }
+    if (marker === 0xda || marker === 0xd9) break
+    const len = buf.readUInt16BE(i + 2)
+    const seg = i + 4
+    if (marker === 0xe0 && seg + 12 <= buf.length && buf.subarray(seg, seg + 5).toString('latin1') === 'JFIF\0') {
+      const units = buf[seg + 7]
+      const xd = buf.readUInt16BE(seg + 8)
+      const yd = buf.readUInt16BE(seg + 10)
+      if (units === 1) { dpiX = xd; dpiY = yd; dpiUnit = 'inch' } else if (units === 2) { dpiX = Math.round(xd * 2.54); dpiY = Math.round(yd * 2.54); dpiUnit = 'cm' }
+    }
+    const isSof = marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc
+    if (isSof && len >= 7 && seg + 5 <= buf.length) {
+      heightPx = buf.readUInt16BE(seg + 1)
+      widthPx = buf.readUInt16BE(seg + 3)
+    }
+    i += 2 + len
+  }
+  return { widthPx, heightPx, dpiX, dpiY, dpiUnit }
+}
+
+/** TIFF：IFD0 的 ImageWidth/Length + XResolution/YResolution（rational） */
+function readTiffInfo(buf) {
+  const le = buf.subarray(0, 2).toString('latin1') === 'II'
+  const u16 = (o) => (le ? buf.readUInt16LE(o) : buf.readUInt16BE(o))
+  const u32 = (o) => (le ? buf.readUInt32LE(o) : buf.readUInt32BE(o))
+  let widthPx = 0
+  let heightPx = 0
+  let dpiX = null
+  let dpiY = null
+  let unit = null
+  try {
+    const ifd = u32(4)
+    const count = u16(ifd)
+    for (let k = 0; k < count; k += 1) {
+      const e = ifd + 2 + k * 12
+      if (e + 12 > buf.length) break
+      const tag = u16(e)
+      const type = u16(e + 2)
+      if (tag === 256) widthPx = type === 3 ? u16(e + 8) : u32(e + 8)
+      else if (tag === 257) heightPx = type === 3 ? u16(e + 8) : u32(e + 8)
+      else if (tag === 296) unit = type === 3 ? u16(e + 8) : u32(e + 8)
+      else if ((tag === 282 || tag === 283) && type === 5) {
+        const off = u32(e + 8)
+        if (off + 8 <= buf.length) {
+          const num = u32(off)
+          const den = u32(off + 4)
+          const val = den ? Math.round(num / den) : null
+          if (val) { if (tag === 282) dpiX = val; else dpiY = val }
+        }
+      }
+    }
+    if (unit === 3) {
+      if (dpiX) dpiX = Math.round(dpiX * 2.54)
+      if (dpiY) dpiY = Math.round(dpiY * 2.54)
+    }
+  } catch { /* 解析失败就当拿不到，主流程会给 FILE_SIZE_UNKNOWN */ }
+  return { widthPx, heightPx, dpiX, dpiY, dpiUnit: unit === 2 ? 'inch' : unit === 3 ? 'cm' : null }
+}
+
+/** PDF：MediaBox 物理尺寸 + 页数 + 字体嵌入 + 是否整页位图 */
+function readPdfInfo(buf) {
+  const s = buf.toString('latin1')
+  const boxes = [...s.matchAll(/\/MediaBox\s*\[\s*(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s*\]/g)]
+  let widthPt = null
+  let heightPt = null
+  if (boxes.length) {
+    const b = boxes[boxes.length - 1]
+    widthPt = Math.abs(Number(b[3]) - Number(b[1]))
+    heightPt = Math.abs(Number(b[4]) - Number(b[2]))
+  }
+  const userUnit = /\/UserUnit\s+([\d.]+)/.exec(s)
+  const scale = userUnit ? Number(userUnit[1]) : 1
+  let pages = null
+  const countMatch = /\/Type\s*\/Pages[\s\S]{0,600}?\/Count\s+(\d+)/.exec(s)
+  if (countMatch) pages = Number(countMatch[1])
+  if (!pages) {
+    const pageObjs = (s.match(/\/Type\s*\/Page(?![s])/g) || []).length
+    if (pageObjs) pages = pageObjs
+  }
+  return {
+    pages,
+    widthPt: widthPt ? widthPt * scale : null,
+    heightPt: heightPt ? heightPt * scale : null,
+    fontsEmbedded: /\/FontFile[23]?/.test(s),
+    hasFont: /\/Font\b/.test(s),
+    imageCount: (s.match(/\/Subtype\s*\/Image/g) || []).length
+  }
+}
+
+const pxToMm = (px, dpi) => (dpi ? (px / dpi) * MM_PER_IN : null)
+const ptToMm = (pt) => (pt / PT_PER_IN) * MM_PER_IN
+
+/**
+ * 体检任意一张图。
+ * @param {string} filePath
+ * @param {object} opts { journal, width:'single'|'double', toleranceMm, maxMB }
+ */
+export async function checkFile(filePath, opts = {}) {
+  const abs = isAbsolute(String(filePath)) ? String(filePath) : resolve(process.cwd(), String(filePath))
+  const issues = []
+  const add = (level, code, message, fix) => issues.push({ level, code, message, fix })
+
+  if (!existsSync(abs)) {
+    add('error', 'FILE_NOT_FOUND', `找不到这个文件：${abs}`, '检查路径拼写；相对路径是相对你当前所在目录算的，建议直接给绝对路径。')
+    return finishFileCheck({ abs, kind: 'unknown', info: {}, preset: { id: 'unknown', label: '未知期刊' }, issues, opts })
+  }
+  const st = statSync(abs)
+  const buf = readFileSync(abs)
+  const kind = sniffKind(buf, abs)
+  if (!buf.length) {
+    add('error', 'FILE_EMPTY', '文件是 0 字节 —— 多半是导出中途失败或被同步工具截断。', '重新导出这个文件；如果是别人发你的，让对方重发。')
+    return finishFileCheck({ abs, kind, info: {}, preset: { id: 'unknown', label: '未知期刊' }, issues, opts })
+  }
+  if (kind === 'unknown') {
+    add('error', 'FILE_UNSUPPORTED', `认不出这个文件类型（${basename(abs)}）—— 只支持 PNG / JPEG / TIFF / PDF / SVG / EPS / AI / PS。`,
+      '确认后缀没写错；如果是 .fig/.ai/.psd 这类设计源文件，先在原软件里导出 PDF/EPS 再交稿。')
+    return finishFileCheck({ abs, kind, info: {}, preset: { id: 'unknown', label: '未知期刊' }, issues, opts })
+  }
+
+  const journalId = String(opts.journal || 'custom').toLowerCase()
+  const { preset, source: presetSource, error: presetError } = await resolvePreset(journalId)
+  const fromFallback = presetSource !== 'journal.mjs'
+  if (fromFallback) {
+    add('warn', 'CHECK_PRESET_FALLBACK',
+      `预置表未就绪（用的是 ${presetSource}），本次按保守兜底值判定，数字可能与期刊当期要求有出入${presetError ? `；原因：${presetError}` : ''}。`,
+      '重装技能包（补回 scripts/lib/journal.mjs 与 assets/journals.json）后重跑，别拿这次结果当最终依据。')
+  } else if (preset.id !== journalId) {
+    add('warn', 'UNKNOWN_JOURNAL', `没有「${journalId}」这个期刊预置，已按通用值（${preset.label}）检查。`,
+      '用 --journal 指定：nature / science / cell / ieee / elsevier / springer / acm / plos / thesis-cn / custom。')
+  }
+
+  const tol = Number(opts.toleranceMm ?? 0.8)
+  const maxMB = Number(opts.maxMB ?? (preset.max_file_mb || 50))
+  if (st.size > maxMB * 1024 * 1024) {
+    add('warn', 'FILE_TOO_LARGE', `文件 ${round(st.size / 1024 / 1024)}MB，超过 ${preset.label} 常要求的上限 ${maxMB}MB。`,
+      '压一压：位图降分辨率或转 JPEG（仅 Extended Data 允许时），矢量图去掉未用字体和嵌入图。')
+  }
+
+  const info = { sizeBytes: st.size }
+  let widthMm = null
+  let heightMm = null
+  let dpiX = null
+  let dpiY = null
+  let deepSvg = null
+
+  if (kind === 'png' || kind === 'jpeg' || kind === 'tiff') {
+    const meta = kind === 'png' ? readPngInfo(buf) : kind === 'jpeg' ? readJpegInfo(buf) : readTiffInfo(buf)
+    Object.assign(info, meta)
+    dpiX = meta.dpiX || null
+    dpiY = meta.dpiY || null
+    const usedDpi = dpiX || null
+    widthMm = pxToMm(meta.widthPx, usedDpi)
+    heightMm = pxToMm(meta.heightPx, usedDpi)
+    info.widthPx = meta.widthPx
+    info.heightPx = meta.heightPx
+    info.dpi_effective = usedDpi
+    info.sizeKnown = Boolean(meta.widthPx && meta.heightPx)
+    if (!usedDpi) {
+      add('warn', 'FILE_DPI_UNDECLARED',
+        `这张 ${kind.toUpperCase()} 没有写物理分辨率（${meta.widthPx}×${meta.heightPx}px，文件里没找到 DPI 信息）。编辑部按 300dpi 折算时，会把它当成 ${round(meta.widthPx / 300 * MM_PER_IN)}mm 宽 —— 可能跟你想要的不一样。`,
+        '导出时勾上 DPI（300/600），或者按目标宽度反算像素：宽 mm ÷ 25.4 × 300。'); 
+      info.width_mm_est = meta.widthPx ? round(meta.widthPx / 300 * MM_PER_IN) : null
+    }
+    info.dpi_unit = meta.dpiUnit
+    if (!meta.widthPx || !meta.heightPx) {
+      add('warn', 'FILE_SIZE_UNKNOWN', '读不出像素尺寸（文件头不规范），只能做格式检查。', '用正规软件重导出一次；或让对方给原文件。')
+    }
+  } else if (kind === 'pdf') {
+    const meta = readPdfInfo(buf)
+    Object.assign(info, meta)
+    widthMm = meta.widthPt ? ptToMm(meta.widthPt) : null
+    heightMm = meta.heightPt ? ptToMm(meta.heightPt) : null
+    if (meta.pages && meta.pages > 1) {
+      add('warn', 'FILE_PDF_MULTIPLE_PAGES', `PDF 有 ${meta.pages} 页 —— 期刊一般要求「一张图一个文件、一页」。`,
+        '每张图单独导一个 PDF，或者在排版软件里拆页；补充材料另存。')
+    }
+    if (meta.hasFont && !meta.fontsEmbedded) {
+      add('error', 'FILE_PDF_FONT_NOT_EMBEDDED', 'PDF 里有文字但没嵌字体 —— 编辑部打开会掉字或变成别的字体（最常见的「图看着没问题，印刷全乱」）。',
+        '导出 PDF 时勾「嵌入字体 / Embed fonts」，或者把文字转成矢量路径（但 Nature 这类刊偏偏又不许转曲，所以优先嵌入）。')
+    }
+    if (meta.imageCount > 0 && !meta.hasFont) {
+      add('warn', 'FILE_PDF_IMAGE_ONLY', '这个 PDF 里只有位图、没有文字 —— 大概率是把截图/照片直接塞进 PDF 了，实质仍是位图。',
+        '要么回到源文件导真正的矢量 PDF，要么按位图规则准备 300dpi 以上。')
+    }
+  } else if (kind === 'svg') {
+    // SVG 交给完整深度检查：字号/溢出/色盲/越界都查
+    deepSvg = await checkSvgDeep(abs, preset, opts)
+    const deepStats = deepSvg && deepSvg.summary && deepSvg.summary.stats
+    if (deepStats) {
+      widthMm = deepStats.width_mm
+      heightMm = deepStats.height_mm
+      Object.assign(info, deepStats)
+      info.sizeKnown = Boolean(widthMm && heightMm)
+    }
+  } else {
+    // eps / ai / ps：只做格式与体积层面的判断
+    info.vector = true
+  }
+
+  // 统一把物理尺寸回填到 info，报告和 JSON 里都能直接看到
+  info.width_mm = widthMm ? round(widthMm) : null
+  info.height_mm = heightMm ? round(heightMm) : null
+
+  /* ---- 尺寸 ---- */
+  const singleMm = Number(preset.single_mm) || null
+  const doubleMm = Number(preset.double_mm) || null
+  const maxH = Number(preset.max_height_mm) || null
+  if (widthMm && kind !== 'svg') {   // SVG 的尺寸由自家深度检查判（同一套规则，避免一次报两遍）
+    if (doubleMm && widthMm > doubleMm + tol) {
+      add('error', 'FILE_WIDTH_TOO_WIDE',
+        `图宽 ${round(widthMm)}mm，超过 ${preset.label} 双栏宽 ${doubleMm}mm（多 ${round(widthMm - doubleMm)}mm）。排版时会被整体缩小，字号跟着掉。`,
+        `收到 ${doubleMm}mm 以内重导；内容多就拆成两张图或改双栏排版。`)
+    } else if (singleMm && doubleMm && widthMm > singleMm + tol && widthMm < doubleMm - tol) {
+      add('warn', 'FILE_WIDTH_BETWEEN_COLUMNS',
+        `图宽 ${round(widthMm)}mm，卡在 ${preset.label} 单栏 ${singleMm}mm 和双栏 ${doubleMm}mm 之间 —— 期刊会把它缩到单栏或拉成双栏，两种都会让字号变。`,
+        `要么收到 ${singleMm}mm（单栏），要么做到 ${doubleMm}mm（双栏），别给中间值。`)
+    }
+  } else if (kind !== 'unknown' && !info.sizeKnown && !info.widthPx && !info.widthPt) {
+    add('warn', 'FILE_SIZE_UNKNOWN', '读不出物理尺寸，尺寸这条没法判 —— 别当成"没问题"。', '按目标栏宽重新导出，并在导出面板里核对 mm。')
+  }
+  if (heightMm && maxH && heightMm > maxH + tol && kind !== 'svg') {
+    add('error', 'FILE_HEIGHT_TOO_TALL', `图高 ${round(heightMm)}mm，超过 ${preset.label} 上限 ${maxH}mm（要留位置给图注）。`,
+      `减高度到 ≤${maxH}mm；内容多就拆图（主图 + 补充材料）。`)
+  }
+  if (widthMm && heightMm && widthMm > heightMm * 6) {
+    add('warn', 'FILE_EXTREME_ASPECT', `长宽比 ${round(widthMm / heightMm)}:1，太扁的图在印刷页上很难摆，字号也会被压得很小。`,
+      '把内容排成 2–3 行，或者拆成两张图；单栏横条一般不超过 4:1。')
+  }
+
+  /* ---- 位图 DPI ---- */
+  const isRaster = RASTER_KINDS.includes(kind)
+  const minDpi = Number(preset.dpi) || null
+  const vectorOnly = Boolean(preset.vector_only)
+  if (isRaster && dpiX && minDpi && dpiX < minDpi - 1) {
+    add('error', 'FILE_DPI_BELOW_MIN', `实际 ${dpiX}dpi，低于 ${preset.label} 要求的 ${minDpi}dpi（这是文件里写的真实值，不是文件名）。`,
+      `按目标尺寸重导：${preset.label} 要 ${minDpi}dpi；或者改成矢量（PDF/EPS）就没这个问题。`)
+  }
+
+  /* ---- 格式 ---- */
+  const accepted = (preset.formats || []).map((f) => String(f).toLowerCase())
+  const kindAsFormat = kind === 'jpeg' ? 'jpg' : kind
+  if (accepted.length) {
+    const ok = accepted.includes(kindAsFormat) || (kindAsFormat === 'jpg' && accepted.includes('jpeg')) || (kindAsFormat === 'tiff' && accepted.includes('tif'))
+    if (!ok) {
+      add('error', 'FILE_FORMAT_NOT_ACCEPTED',
+        `${preset.label} 的主图格式清单里没有 ${kindAsFormat.toUpperCase()}（接受：${accepted.join(' / ')}）。`,
+        `按接受格式重导（优先 PDF/EPS 矢量）；${vectorOnly ? '这本刊主图只收矢量，位图只能放 Extended Data。' : '位图请确认 dpi 与色彩模式。'}`)
+    }
+  }
+  if (vectorOnly && isRaster) {
+    add('error', 'FILE_RASTER_FOR_VECTOR_JOURNAL',
+      `${preset.label} 主图只收矢量（${accepted.join(' / ') || 'PDF/EPS'}），你交的是位图。编辑部会退回。`,
+      '回源文件导 PDF/EPS；如果是别人给的位图，只能重画或用 Original Data 的方式提交。')
+  }
+
+  /* ---- AI 生成图标记（学术诚信） ---- */
+  const stem = basename(abs).replace(/\.[^.]+$/, '')
+  const markerPath = join(dirname(abs), `${stem}.ai-generated.json`)
+  if (existsSync(markerPath)) {
+    add('error', 'AI_IMAGE_AS_DATA_FIGURE',
+      `这张图旁边有 AI 生成标记（${basename(markerPath)}）—— 它只能当概念示意/封面/TOC，不能作为数据图、结构图或结果图交稿。`,
+      '要么重画成真实数据图；要么在图注里明确写「AI-generated illustration」，并只用在封面/示意图位置。')
+  }
+
+  return finishFileCheck({ abs, kind, info, preset, issues, opts, deepSvg })
+}
+
+/** SVG 走自家完整深度检查（临时工作区，不写用户目录） */
+async function checkSvgDeep(abs, preset, opts) {
+  try {
+    const tmp = mkdtempSync(join(tmpdir(), 'pf-checkfile-'))
+    mkdirSync(join(tmp, 'out'), { recursive: true })
+    const target = join(tmp, 'out', basename(abs))
+    copyFileSync(abs, target)
+    const parsed = parseSvg(readFileSync(abs, 'utf8'))
+    const w = parsed && parsed.widthMm
+    const widthMode = w && preset.double_mm && Math.abs(w - Number(preset.double_mm)) < Math.abs(w - Number(preset.single_mm)) ? 'double' : 'single'
+    writeFileSync(join(tmp, 'figure.json'), JSON.stringify({ name: basename(abs, '.svg'), journal: preset.id, width: widthMode }))
+    const res = await checkFigure(tmp, { journal: preset.id, svgPath: target, write: false, toleranceMm: opts.toleranceMm })
+    return res
+  } catch (e) {
+    return { ok: false, error: e && e.message ? e.message : String(e) }
+  }
+}
+
+/** 汇总成人话报告（与 checkFigure 的 summary.text 同风格） */
+function finishFileCheck({ abs, kind, info, preset, issues, opts, deepSvg }) {
+  const merged = [...issues]
+  if (deepSvg && Array.isArray(deepSvg.issues)) {
+    for (const i of deepSvg.issues) {
+      // 深度检查里跟文件本身相关的尺寸/格式条目已经在文件层判过，避免重复
+      if (['NO_SPEC', 'NO_SVG'].includes(i.code)) continue
+      merged.push(i)
+    }
+  }
+  const seen = new Set()
+  const dedup = merged.filter((i) => {
+    const k = `${i.level}|${i.code}|${i.message}`
+    if (seen.has(k)) return false
+    seen.add(k)
+    return true
+  })
+  const errors = dedup.filter((i) => i.level === 'error').length
+  const warns = dedup.filter((i) => i.level === 'warn').length
+  const pass = errors === 0
+
+  const kindLabel = KIND_LABEL[kind] || kind
+  const dims = []
+  if (info.widthPx) dims.push(`${info.widthPx}×${info.heightPx}px`)
+  if (info.width_mm || info.height_mm) dims.push(`${round(info.width_mm)}×${round(info.height_mm)}mm`)
+  if (info.dpi_effective) dims.push(`${info.dpi_effective}dpi`)
+  else if (info.widthPx) dims.push(`按 300dpi 折算 ${round(info.widthPx / 300 * MM_PER_IN)}×${round(info.heightPx / 300 * MM_PER_IN)}mm`)
+  if (kind === 'pdf' && info.pages) dims.push(`${info.pages} 页`)
+  const head = `期刊：${preset.label}（单栏 ${preset.single_mm ?? '?'}mm / 双栏 ${preset.double_mm ?? '?'}mm${preset.max_height_mm ? `，最大高 ${preset.max_height_mm}mm` : ''}）\n文件：${basename(abs)}  ${kindLabel}${dims.length ? ` · ${dims.join(' · ')}` : ''}`
+
+  const lines = [head]
+  if (pass && !warns) {
+    lines.push(kind === 'svg'
+      ? '\n✅ 没发现硬性问题（SVG 走了深度检查：尺寸、字号、文字溢出、色盲对比、元素越界）。'
+      : '\n✅ 没发现硬性问题。注意：位图/PDF 只能查尺寸、真实 DPI、格式、字体嵌入；字号与文字溢出需要 SVG 源文件才能判。')
+  }
+  if (errors) {
+    lines.push(`\n❌ ${errors} 个必须改的问题：`)
+    for (const i of dedup.filter((x) => x.level === 'error')) lines.push(`  · [${i.code}] ${i.message}\n    → 怎么改：${i.fix}`)
+  }
+  if (warns) {
+    lines.push(`${errors ? '\n' : '\n'}⚠️ ${warns} 个建议看一眼的问题：`)
+    for (const i of dedup.filter((x) => x.level === 'warn')) lines.push(`  · [${i.code}] ${i.message}\n    → 怎么办：${i.fix}`)
+  }
+  return {
+    ok: true,
+    mode: 'file',
+    pass,
+    file: abs,
+    kind,
+    journal: preset.id,
+    issues: dedup,
+    summary: { errors, warns, text: lines.join('\n'), stats: { file: abs, kind, ...info } },
+    checkedFile: abs
+  }
 }
 
 /* ==========================================================================

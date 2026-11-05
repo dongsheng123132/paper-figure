@@ -111,6 +111,23 @@ Every command writes JSON to stdout, human-readable progress to stderr, and on f
 
 ---
 
+## Already have a figure? Audit it instead of redrawing
+
+Figures you did not draw — a co-author's PNG, an Origin PDF, another tool's SVG — can be audited against a journal's spec:
+
+```bash
+node scripts/fig.mjs check --file ./coauthor-fig.pdf --journal nature
+node scripts/fig.mjs check --file ./figure1.png      --journal ieee
+```
+
+| Type | What is checked |
+|---|---|
+| PNG / JPEG / TIFF | pixel size, the **DPI actually written in the file**, whether the journal accepts the format |
+| PDF | physical size (MediaBox), page count, font embedding, image-only pages |
+| SVG | full deep check: column width, type-size bounds, text overflow, colour-blind contrast, elements outside the canvas |
+
+Two integrity red lines fail hard: a sibling `.ai-generated.json` marker (AI image submitted as a data figure), and a raster file for a vector-only journal (e.g. Nature main figures).
+
 ## Pricing
 
 | Action | Cost |

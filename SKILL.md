@@ -4,22 +4,22 @@ slug: paper-figure
 displayName: "论文配图 · 可投稿版"
 display_name: "论文配图 · 可投稿版"
 display_name_en: "Paper Figure"
-version: "1.0.2"
+version: "1.1.0"
 author: "he fangsheng <hefangsheng@gmail.com>"
 license: MIT
 homepage: "https://github.com/u-claw-os/paper-figure"
 tags: [academic-figures, journal-compliance, scientific-visualization]
-description: "可投稿的论文图：把「合规格、不被退稿」变成一条命令。期刊栏宽、最小字号、字体嵌入、色彩模式、300/600/1000 dpi、面板 a/b/c 逐条对着官方作者指南核过（每条带官方 URL 与核实日期）；结构图/流程图/机制图/对比图用代码排成矢量，数据图从你的真 CSV 出；本机免费跑硬校验（尺寸/字号/DPI/文字溢出/色盲），多 AI 低价会审只给「可执行的修改清单」。AI 出图只限概念示意/封面/TOC，并强制标注。当用户说「论文配图」「帮我画个架构图」「画流程图/机制图」「这数据图不好看」「图被期刊退回重画」「做个封面图」「TOC graphic」「答辩 PPT 里的框架图」「基金本子配图」「这张图能投吗」时使用。安装免费，本地渲染/检查/导出不花钱、论文数据不上传；只有 AI 概念图（¥0.03/张）和会审（¥0.01–0.07/轮）从虾盘云钱包按次扣费。"
-description_zh: "可投稿的论文图：期刊栏宽、最小字号、字体嵌入、色彩模式、300/600/1000 dpi 逐条对着官方作者指南核过（带 URL 与核实日期），结构图/流程图/机制图/对比图用代码排成矢量、数据图从真 CSV 出，本机免费硬校验（尺寸/字号/DPI/溢出/色盲），多 AI 会审只给可执行修改清单；AI 只做概念示意/封面/TOC 并强制标注。当用户说「论文配图」「画架构图」「画流程图」「数据图不好看」「被期刊退回重画」「封面图」「TOC graphic」「答辩图」「基金本子配图」时使用。安装免费，本地渲染/检查/导出不花钱、数据不上传；AI 概念图 ¥0.03/张、会审 ¥0.01–0.07/轮，从虾盘云钱包按次扣费。"
-description_en: "Submission-ready paper figures: journal-compliant layout plus a hard check and an actionable fix list. Column widths, minimum type size, font embedding, colour mode and 300/600/1000 dpi are taken from the publisher's own author guidelines, each rule carrying the official URL and verification date; pipeline, architecture, mechanism and comparison figures are rendered as vectors by code, data figures come from your real CSV, and local render/check/export all run on your machine so paper data is never uploaded. Multi-model review returns a fix list rather than a score. AI images are limited to concept sketches, cover art and TOC graphics and are always labelled."
+description: "可投稿的论文图：把「合规格、不被退稿」变成一条命令。期刊栏宽、最小字号、字体嵌入、色彩模式、300/600/1000 dpi、面板 a/b/c 逐条对着官方作者指南核过（每条带官方 URL 与核实日期）；结构图/流程图/机制图/对比图用代码排成矢量，数据图从你的真 CSV 出；本机免费跑硬校验（尺寸/字号/DPI/文字溢出/色盲），多 AI 低价会审只给「可执行的修改清单」。AI 出图只限概念示意/封面/TOC，并强制标注。当用户说「论文配图」「帮我画个架构图」「画流程图/机制图」「这数据图不好看」「图被期刊退回重画」「做个封面图」「TOC graphic」「答辩 PPT 里的框架图」「基金本子配图」「论文插图」「这张图能投吗」时使用；也用于**体检别人画的图**：合作者发来的 PNG/PDF/SVG、别的工具导出的图，`check --file` 直接判它能不能投这本刊（尺寸/真实 DPI/格式/字体嵌入/页数）。安装免费，本地渲染/检查/导出不花钱、论文数据不上传；只有 AI 概念图（¥0.03/张）和会审（¥0.01–0.07/轮）从虾盘云钱包按次扣费。"
+description_zh: "可投稿的论文图：期刊栏宽、最小字号、字体嵌入、色彩模式、300/600/1000 dpi 逐条对着官方作者指南核过（带 URL 与核实日期），结构图/流程图/机制图/对比图用代码排成矢量、数据图从真 CSV 出，本机免费硬校验（尺寸/字号/DPI/溢出/色盲），多 AI 会审只给可执行修改清单；AI 只做概念示意/封面/TOC 并强制标注。当用户说「论文配图」「画架构图」「画流程图」「数据图不好看」「被期刊退回重画」「封面图」「TOC graphic」「答辩图」「基金本子配图」「论文插图」时使用；也能**体检别人画的图**（`check --file` 支持 PNG/JPEG/TIFF/PDF/SVG/EPS）。安装免费，本地渲染/检查/导出不花钱、数据不上传；AI 概念图 ¥0.03/张、会审 ¥0.01–0.07/轮，从虾盘云钱包按次扣费。"
+description_en: "Submission-ready paper figures: journal-compliant layout plus a hard check and an actionable fix list. Column widths, minimum type size, font embedding, colour mode and 300/600/1000 dpi are taken from the publisher's own author guidelines, each rule carrying the official URL and verification date; pipeline, architecture, mechanism and comparison figures are rendered as vectors by code, data figures come from your real CSV, and local render/check/export all run on your machine so paper data is never uploaded. Multi-model review returns a fix list rather than a score. AI images are limited to concept sketches, cover art and TOC graphics and are always labelled. It also audits figures you did not draw: `check --file` takes a PNG/JPEG/TIFF/PDF/SVG/EPS and tells you whether it can be submitted to a given journal (width, real DPI, accepted format, font embedding, page count)."
 examples_zh:
   - "帮我画论文里的方法总览图，投 Nature 子刊，单栏。"
   - "把 data/main.csv 画成带误差棒的柱状图，坐标轴要带单位。"
-  - "这张图投稿前帮我查合规：栏宽、字号、DPI、色盲，哪儿不对给改法。"
+  - "合作者发我一张 PNG/PDF 的图，投 Nature 能过吗？哪儿不行给改法。"
 examples_en:
   - "Draw the pipeline overview for my paper as a Nature single-column figure."
   - "Plot data/main.csv as a bar chart with error bars and labelled axes."
-  - "Check this figure against the journal specs before I submit, and tell me how to fix each issue."
+  - "A co-author sent me this PNG/PDF — will Nature accept it, and what do I need to fix?"
 ---
 
 # 可投稿的论文图（Paper Figure）
@@ -64,12 +64,39 @@ examples_en:
 | `chart` | `data/*.csv` + figure.json 里的 data 段 → 期刊风格图表 SVG | `node scripts/fig.mjs chart ./fig1` |
 | `render` | `figure.json` → `out/<name>.svg`（pipeline/architecture/mechanism/comparison/concept/toc 排版） | `node scripts/fig.mjs render ./fig1 --journal nature` |
 | `check` | 确定性合规检查 → `out/check.json` + 人话报告（每条带 fix） | `node scripts/fig.mjs check ./fig1 --journal ieee` |
+| `check --file` | **体检任意一张图**（PNG/JPEG/TIFF/PDF/SVG/EPS）→ 判它能不能投这本刊 | `node scripts/fig.mjs check --file ./coauthor-fig.pdf --journal nature` |
 | `export` | 按期刊规格导出 PNG/PDF/TIFF | `node scripts/fig.mjs export ./fig1 --formats png,pdf,tif --dpi 600` |
 | `concept` | AI 概念示意图/封面/TOC 草稿（默认 `gpt-image-2.5-1k`） | `node scripts/fig.mjs concept ./fig1 --n 2` |
 | `review` | 多 AI 会审 → `out/review.json`（**先给修改清单**，分数仅参考） | `node scripts/fig.mjs review ./fig1 --tier econ` |
 | `wallet` | 看密钥来源、余额、充值链接（只读，不花钱） | `node scripts/fig.mjs wallet` |
 
 典型一口气：`init → spec → render（或 chart）→ check → export`；`check` 全绿但还想知道"审稿人/编辑会挑什么"，再加 `review`；要封面/TOC 才用 `concept`。
+
+## 已经在用别的工具画图？先体检（v1.1 新增）
+
+不管图是谁画的 —— 合作者发来的、Origin/Illustrator 导的、别的 AI 技能出的、甚至从 PDF 里截的 —— 都能用同一条命令判它**能不能投这本刊**：
+
+```bash
+node scripts/fig.mjs check --file ./coauthor-fig.pdf  --journal nature
+node scripts/fig.mjs check --file ./figure1.png       --journal ieee
+node scripts/fig.mjs check --file ./framework.svg     --journal elsevier
+```
+
+它能判什么：
+
+| 文件类型 | 能查 | 查不了（会明说） |
+|---|---|---|
+| PNG / JPEG / TIFF | 像素尺寸、**文件里写的真实 DPI**（不是文件名）、该刊收不收这个格式、按 300dpi 折算的物理尺寸 | 字号、文字溢出、色盲对比 |
+| PDF | MediaBox 物理尺寸、页数（一图一文件）、字体是否嵌入、是否整页位图 | 字号（除非 PDF 里带结构化文字） |
+| SVG | 全套深度检查：栏宽/字号上下限/文字溢出四边/色盲对比/元素越界 | —— |
+| EPS / AI / PS | 格式是否被接受、体积 | 内部结构 |
+
+顺带查两条学术诚信红线：
+
+- 图旁边有 `.ai-generated.json`（AI 生成的图）→ 直接判 **error**：AI 图只能做概念示意/封面/TOC，不能当数据图交稿；
+- 同一个期刊的格式要求（如 Nature 主图只收矢量）→ 交位图直接判 error，并说明「位图只能放进 Extended Data」。
+
+退出码：`0` 没有必须改的问题，`1` 有问题（报告里逐条给改法），`2` 检查器自己崩了。
 
 ## 成本（2026-11-03 网关实测口径）
 
