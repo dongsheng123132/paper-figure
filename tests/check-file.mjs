@@ -5,7 +5,7 @@
  * 只读本地文件、只造临时文件，不联网、不花钱。
  * 跑法：node tests/check-file.mjs
  */
-import { mkdtempSync, writeFileSync, copyFileSync, existsSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, readFileSync, copyFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -23,15 +23,38 @@ const codes = (r) => (r.issues || []).map((i) => i.code)
 
 const tmp = mkdtempSync(join(tmpdir(), 'pf-checkfile-test-'))
 
-/* ---------- 1. 真实 PNG（我们的示例图，Chrome 导出，未写 pHYs） ---------- */
+/* ---------- 1. 真实 PNG（示例图，导出时已写入 300dpi） ---------- */
 const png = join(ROOT, 'examples', 'framework-overview.png')
+
+/** 把 PNG 里的 pHYs 块摘掉，模拟「导出时没写 DPI」的常见情况 */
+function stripPngPhys(buf) {
+  const kept = []
+  let off = 8
+  while (off + 12 <= buf.length) {
+    const len = buf.readUInt32BE(off)
+    const type = buf.subarray(off + 4, off + 8).toString('latin1')
+    const end = off + 12 + len
+    if (type !== 'pHYs') kept.push(buf.subarray(off, Math.min(end, buf.length)))
+    off = end
+    if (type === 'IEND') break
+  }
+  return Buffer.concat([buf.subarray(0, 8), ...kept])
+}
+
 if (existsSync(png)) {
   const r = await checkFile(png, { journal: 'nature' })
   ok('PNG：Nature 主图拒收位图', codes(r).includes('FILE_RASTER_FOR_VECTOR_JOURNAL'), codes(r).join(','))
   ok('PNG：格式不在接受清单里', codes(r).includes('FILE_FORMAT_NOT_ACCEPTED'))
-  ok('PNG：没写 DPI 时如实说「查不到」而不是假装合格', codes(r).includes('FILE_DPI_UNDECLARED'))
+  ok('PNG：导出时写进去的 300dpi 能被读出来', r.summary.stats.dpi_effective === 300 && Math.abs(r.summary.stats.width_mm - 183) < 1.5,
+    `${r.summary.stats.dpi_effective}dpi · ${r.summary.stats.width_mm}mm`)
   ok('PNG：不通过（pass=false）', r.pass === false)
-  ok('PNG：报告里有「按 300dpi 折算」的参考尺寸', /按 300dpi 折算/.test(r.summary.text))
+
+  // 摘掉 pHYs 后：必须如实报「查不到 DPI」，并给出按 300dpi 折算的参考尺寸
+  const noDpi = join(tmp, 'no-dpi.png')
+  writeFileSync(noDpi, stripPngPhys(readFileSync(png)))
+  const r2 = await checkFile(noDpi, { journal: 'nature' })
+  ok('PNG：没写 DPI 时如实说「查不到」而不是假装合格', codes(r2).includes('FILE_DPI_UNDECLARED'))
+  ok('PNG：报告里有「按 300dpi 折算」的参考尺寸', /按 300dpi 折算/.test(r2.summary.text))
 } else {
   console.log('SKIP  示例 PNG 不存在，跳过 PNG 用例')
 }

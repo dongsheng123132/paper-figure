@@ -1,0 +1,122 @@
+{
+  "type": "pipeline",
+  "journal": "nature",
+  "width": "double",
+  "height_mm": null,
+  "dpi": null,
+  "font": "Arial",
+  "font_size_pt": 7,
+  "palette": "okabe-ito",
+  "name": "attention-qkv",
+  "caption": "图 1  缩放点积注意力。查询、键、值三路线性投影后计算相似度，softmax 归一化加权求和，再拼接多头输出。",
+  "notes": "Q/K/V 三路并排是这张图的读法；不要把 n2、n3 合并。",
+  "panels": [
+    {
+      "id": "a",
+      "title": "",
+      "caption": "",
+      "nodes": [
+        {
+          "id": "n1",
+          "label": "Q (query)",
+          "sub": "XW_Q",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n2",
+          "label": "K (key)",
+          "sub": "XW_K",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n3",
+          "label": "V (value)",
+          "sub": "XW_V",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n4",
+          "label": "Scaled Dot-Product",
+          "sub": "QKᵀ / √d_k",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n5",
+          "label": "Softmax",
+          "sub": "",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n6",
+          "label": "Weighted Sum",
+          "sub": "αV",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n7",
+          "label": "Concat + W_O",
+          "sub": "",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        }
+      ],
+      "edges": [
+        {
+          "from": "n1",
+          "to": "n4",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n2",
+          "to": "n4",
+          "label": "score",
+          "kind": "arrow"
+        },
+        {
+          "from": "n4",
+          "to": "n5",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n5",
+          "to": "n6",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n3",
+          "to": "n6",
+          "label": "value",
+          "kind": "arrow"
+        },
+        {
+          "from": "n6",
+          "to": "n7",
+          "label": "",
+          "kind": "arrow"
+        }
+      ]
+    }
+  ],
+  "layout": {
+    "direction": "left-right",
+    "gap_mm": 6,
+    "node_w_mm": 26,
+    "node_h_mm": 14
+  }
+}

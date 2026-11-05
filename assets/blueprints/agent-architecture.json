@@ -1,0 +1,114 @@
+{
+  "type": "pipeline",
+  "journal": "nature",
+  "width": "double",
+  "height_mm": null,
+  "dpi": null,
+  "font": "Arial",
+  "font_size_pt": 7,
+  "palette": "okabe-ito",
+  "name": "agent-architecture",
+  "caption": "图 1  Agent 总体架构。规划器把任务拆成子目标，调用外部工具与记忆模块，反思模块根据执行结果决定重试或终止。",
+  "notes": "反思回边（dashed）是这张图的关键；不要把 n5→n2 删掉，否则看不出闭环。",
+  "panels": [
+    {
+      "id": "a",
+      "title": "",
+      "caption": "",
+      "nodes": [
+        {
+          "id": "n1",
+          "label": "User Task",
+          "sub": "",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n2",
+          "label": "Planner",
+          "sub": "decompose → plan",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n3",
+          "label": "Tool Use",
+          "sub": "search / code / API",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n4",
+          "label": "Memory",
+          "sub": "episodic + scratchpad",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n5",
+          "label": "Reflector",
+          "sub": "critique → retry",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n6",
+          "label": "Final Answer",
+          "sub": "",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        }
+      ],
+      "edges": [
+        {
+          "from": "n1",
+          "to": "n2",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n2",
+          "to": "n3",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n3",
+          "to": "n4",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n4",
+          "to": "n5",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n5",
+          "to": "n2",
+          "label": "replan",
+          "kind": "dashed"
+        },
+        {
+          "from": "n5",
+          "to": "n6",
+          "label": "accept",
+          "kind": "arrow"
+        }
+      ]
+    }
+  ],
+  "layout": {
+    "direction": "left-right",
+    "gap_mm": 6,
+    "node_w_mm": 26,
+    "node_h_mm": 14
+  }
+}

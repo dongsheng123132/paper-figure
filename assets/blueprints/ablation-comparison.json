@@ -1,0 +1,198 @@
+{
+  "type": "comparison",
+  "journal": "nature",
+  "width": "double",
+  "height_mm": null,
+  "dpi": null,
+  "font": "Arial",
+  "font_size_pt": 7,
+  "palette": "okabe-ito",
+  "name": "ablation-comparison",
+  "caption": "图 1  消融实验对比。三联面板分别对应基线、加入组件 A、加入组件 A+B 的流程与结果。",
+  "notes": "三个面板的节点数量不一样是故意的（新增组件看得见）。数字换成你自己的真实结果，别编。",
+  "panels": [
+    {
+      "id": "a",
+      "title": "Baseline",
+      "caption": "",
+      "nodes": [
+        {
+          "id": "a1",
+          "label": "Backbone",
+          "sub": "",
+          "kind": "box",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "a2",
+          "label": "Head",
+          "sub": "",
+          "kind": "box",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "a3",
+          "label": "Acc 71.2",
+          "sub": "",
+          "kind": "note",
+          "group": "a",
+          "color": null
+        }
+      ],
+      "edges": [
+        {
+          "from": "a1",
+          "to": "a2",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "a2",
+          "to": "a3",
+          "label": "",
+          "kind": "arrow"
+        }
+      ]
+    },
+    {
+      "id": "b",
+      "title": "+ Component A",
+      "caption": "",
+      "nodes": [
+        {
+          "id": "b1",
+          "label": "Backbone",
+          "sub": "",
+          "kind": "box",
+          "group": "b",
+          "color": null
+        },
+        {
+          "id": "b2",
+          "label": "A Adapter",
+          "sub": "",
+          "kind": "rounded",
+          "group": "b",
+          "color": null
+        },
+        {
+          "id": "b3",
+          "label": "Head",
+          "sub": "",
+          "kind": "box",
+          "group": "b",
+          "color": null
+        },
+        {
+          "id": "b4",
+          "label": "Acc 74.8",
+          "sub": "",
+          "kind": "note",
+          "group": "b",
+          "color": null
+        }
+      ],
+      "edges": [
+        {
+          "from": "b1",
+          "to": "b2",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "b2",
+          "to": "b3",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "b3",
+          "to": "b4",
+          "label": "",
+          "kind": "arrow"
+        }
+      ]
+    },
+    {
+      "id": "c",
+      "title": "+ A + B",
+      "caption": "",
+      "nodes": [
+        {
+          "id": "c1",
+          "label": "Backbone",
+          "sub": "",
+          "kind": "box",
+          "group": "c",
+          "color": null
+        },
+        {
+          "id": "c2",
+          "label": "A Adapter",
+          "sub": "",
+          "kind": "rounded",
+          "group": "c",
+          "color": null
+        },
+        {
+          "id": "c3",
+          "label": "B Adapter",
+          "sub": "",
+          "kind": "rounded",
+          "group": "c",
+          "color": null
+        },
+        {
+          "id": "c4",
+          "label": "Head",
+          "sub": "",
+          "kind": "box",
+          "group": "c",
+          "color": null
+        },
+        {
+          "id": "c5",
+          "label": "Acc 77.5",
+          "sub": "",
+          "kind": "note",
+          "group": "c",
+          "color": null
+        }
+      ],
+      "edges": [
+        {
+          "from": "c1",
+          "to": "c2",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "c2",
+          "to": "c3",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "c3",
+          "to": "c4",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "c4",
+          "to": "c5",
+          "label": "",
+          "kind": "arrow"
+        }
+      ]
+    }
+  ],
+  "layout": {
+    "direction": "left-right",
+    "gap_mm": 6,
+    "node_w_mm": 26,
+    "node_h_mm": 14
+  }
+}

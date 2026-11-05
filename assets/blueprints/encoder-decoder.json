@@ -1,0 +1,108 @@
+{
+  "type": "pipeline",
+  "journal": "nature",
+  "width": "double",
+  "height_mm": null,
+  "dpi": null,
+  "font": "Arial",
+  "font_size_pt": 7,
+  "palette": "okabe-ito",
+  "name": "encoder-decoder",
+  "caption": "图 1  编码器—解码器框架。源序列经 N 层编码器得到表示，解码器通过交叉注意力读取，逐 token 输出目标序列。",
+  "notes": "N 层数写在 sub 字段；如果要画三层堆叠，把 n2/n4 拆成三个节点并在 edges 里串联。",
+  "panels": [
+    {
+      "id": "a",
+      "title": "",
+      "caption": "",
+      "nodes": [
+        {
+          "id": "n1",
+          "label": "Source Tokens",
+          "sub": "",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n2",
+          "label": "Encoder × N",
+          "sub": "self-attention",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n3",
+          "label": "Memory",
+          "sub": "H ∈ R^{m×d}",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n4",
+          "label": "Decoder × N",
+          "sub": "masked + cross-attn",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n5",
+          "label": "Linear + Softmax",
+          "sub": "",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n6",
+          "label": "Target Tokens",
+          "sub": "",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        }
+      ],
+      "edges": [
+        {
+          "from": "n1",
+          "to": "n2",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n2",
+          "to": "n3",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n3",
+          "to": "n4",
+          "label": "cross-attention",
+          "kind": "arrow"
+        },
+        {
+          "from": "n4",
+          "to": "n5",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n5",
+          "to": "n6",
+          "label": "",
+          "kind": "arrow"
+        }
+      ]
+    }
+  ],
+  "layout": {
+    "direction": "left-right",
+    "gap_mm": 6,
+    "node_w_mm": 26,
+    "node_h_mm": 14
+  }
+}

@@ -24,6 +24,8 @@ const HELP = {
   usage: 'node scripts/fig.mjs <命令> [工作区] [--参数 值]',
   commands: [
     { cmd: 'init <dir>', what: '建工作区：brief.md / figure.json / data/main.csv / out/', cost: '免费' },
+    { cmd: 'templates', what: '列结构图模板：Transformer/编码器-解码器/CNN/GNN/RAG/Agent/训练流程/注意力/消融对比', cost: '免费' },
+    { cmd: 'new <dir> --template <id>', what: '从模板建工作区（figure.json + brief.md + data/ + out/）', cost: '免费' },
     { cmd: 'spec <dir>', what: 'brief.md → figure.json（本地规则解析，加 --ai 才调模型）', cost: '免费' },
     { cmd: 'render <dir>', what: 'figure.json → out/<name>.svg（流程/架构/机制/对比/概念/目录图）', cost: '免费' },
     { cmd: 'chart <dir>', what: 'data/*.csv → 期刊风格图表 SVG（bar/line/scatter/grouped-bar/errorbar）', cost: '免费' },
@@ -329,6 +331,47 @@ async function cmdReview(args) {
   })
 }
 
+async function cmdTemplates(args) {
+  const mod = await loadTool('blueprints', 'listBlueprints')
+  const list = mod.listBlueprints ? mod.listBlueprints() : mod()
+  if (!Array.isArray(list) || !list.length) {
+    throw new PFError('没有可用的结构图模板（assets/blueprints/ 是空的）', '重装技能包；或先用 init 建空白工作区。')
+  }
+  log(`结构图模板 ${list.length} 个：`)
+  for (const b of list) log(`  ${b.id}  ${b.title}  （${b.nodes} 个模块，${b.width}）`)
+  return { ok: true, templates: list, next: 'node scripts/fig.mjs new <目录> --template <id> [--journal nature]' }
+}
+
+async function cmdNew(args) {
+  const dir = resolve(args._[0] || '')
+  const id = pickStr(args.flags.template)
+  if (!args._[0]) {
+    throw new PFError('缺目录参数', '用法：node scripts/fig.mjs new ./fig1 --template rag-pipeline')
+  }
+  if (!id) {
+    throw new PFError('缺 --template', '先跑 `node scripts/fig.mjs templates` 看可用的模板 id，再加 --template <id>。')
+  }
+  const mod = await loadTool('blueprints', 'createWorkspaceFromBlueprint')
+  const r = mod.createWorkspaceFromBlueprint(dir, id, {
+    journal: pickStr(args.flags.journal),
+    width: pickStr(args.flags.width),
+    palette: pickStr(args.flags.palette),
+    font_size_pt: pickNum(args.flags['font-size']) || pickNum(args.flags.font_size_pt),
+    force: Boolean(args.flags.force),
+  })
+  log(`已从模板 ${id} 建好工作区：${r.dir}`)
+  log(`下一步：node scripts/fig.mjs render ${r.dir}`)
+  return {
+    ok: true,
+    dir: r.dir,
+    template: id,
+    specPath: r.specPath,
+    briefPath: r.briefPath,
+    nodes: (r.spec.panels || []).reduce((n, p) => n + ((p.nodes || []).length), 0),
+    next: [`node scripts/fig.mjs render ${r.dir}`, `node scripts/fig.mjs check ${r.dir}`, `node scripts/fig.mjs export ${r.dir} --formats png,pdf`],
+  }
+}
+
 async function cmdWallet() {
   const mod = await loadTool('ai', 'walletStatus')
   return mod.walletStatus()
@@ -351,6 +394,8 @@ function pickWidth(v) {
 
 const COMMANDS = {
   init: cmdInit,
+  templates: cmdTemplates,
+  new: cmdNew,
   spec: cmdSpec,
   render: cmdRender,
   chart: cmdChart,

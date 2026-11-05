@@ -1,0 +1,131 @@
+{
+  "type": "pipeline",
+  "journal": "nature",
+  "width": "double",
+  "height_mm": null,
+  "dpi": null,
+  "font": "Arial",
+  "font_size_pt": 7,
+  "palette": "okabe-ito",
+  "name": "training-pipeline",
+  "caption": "图 1  训练与评测流程。(a) 数据经预处理送入模型，损失回传更新参数；(b) 留出集只用于评估。",
+  "notes": "两个面板分别对应训练与评测；梯度回传（n5→n3）是虚线，别删。数字换成你自己的真实结果。",
+  "panels": [
+    {
+      "id": "a",
+      "title": "Training",
+      "caption": "",
+      "nodes": [
+        {
+          "id": "n1",
+          "label": "Data",
+          "sub": "train split",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n2",
+          "label": "Preprocess",
+          "sub": "tokenize / augment",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n3",
+          "label": "Model",
+          "sub": "forward",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n4",
+          "label": "Loss",
+          "sub": "cross-entropy",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n5",
+          "label": "Optimizer",
+          "sub": "AdamW + schedule",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        }
+      ],
+      "edges": [
+        {
+          "from": "n1",
+          "to": "n2",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n2",
+          "to": "n3",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n3",
+          "to": "n4",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n4",
+          "to": "n5",
+          "label": "gradient",
+          "kind": "arrow"
+        },
+        {
+          "from": "n5",
+          "to": "n3",
+          "label": "update",
+          "kind": "dashed"
+        }
+      ]
+    },
+    {
+      "id": "b",
+      "title": "Evaluation",
+      "caption": "",
+      "nodes": [
+        {
+          "id": "n6",
+          "label": "Held-out Set",
+          "sub": "val / test",
+          "kind": "box",
+          "group": "b",
+          "color": null
+        },
+        {
+          "id": "n7",
+          "label": "Metrics",
+          "sub": "Acc / F1 / AUC",
+          "kind": "box",
+          "group": "b",
+          "color": null
+        }
+      ],
+      "edges": [
+        {
+          "from": "n6",
+          "to": "n7",
+          "label": "",
+          "kind": "arrow"
+        }
+      ]
+    }
+  ],
+  "layout": {
+    "direction": "left-right",
+    "gap_mm": 6,
+    "node_w_mm": 30,
+    "node_h_mm": 14
+  }
+}

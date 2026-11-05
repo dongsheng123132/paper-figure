@@ -137,8 +137,13 @@ export async function renderFigure(workDir, opts = {}) {
   // ---- 1) 版式
   const plan = layoutFigure(spec, ctx)
 
-  // ---- 2) 画布高度
-  const naturalH = plan.height + MARGIN_MM * 2
+  // ---- 2) 画布高度（回边的绕行车道可能伸到内容下方，要一起算）
+  const edgeBottom = (plan.edges || []).reduce(
+    (m, e) => Math.max(m, ...(e.points || [{ y: 0 }]).map((p) => Number(p.y) || 0)),
+    0,
+  )
+  const contentBottom = Math.max(plan.height, edgeBottom)
+  const naturalH = contentBottom + MARGIN_MM * 2
   let pageH = naturalH
   const requested = Number(opts.height_mm ?? spec.height_mm)
   if (Number.isFinite(requested) && requested > 0) {
@@ -558,13 +563,41 @@ function assignLayers(nodes, edges) {
   const layer = new Map()
   if (!nodes.length) return layer
   const ids = nodes.map((n) => n.id)
+  const idSet = new Set(ids)
   const adj = new Map(ids.map((id) => [id, []]))
-  const indeg = new Map(ids.map((id) => [id, 0]))
+  const rawEdges = []
   for (const e of edges) {
-    if (!adj.has(e.from) || !adj.has(e.to) || e.from === e.to) continue
+    if (!idSet.has(e.from) || !idSet.has(e.to) || e.from === e.to) continue
     adj.get(e.from).push(e.to)
+    rawEdges.push(e)
+  }
+
+  // 环会让 Kahn 卡住：先把「回边」找出来，分层时忽略它们（画的时候照画）。
+  // 典型场景：Agent 的 replan 回边、训练的梯度回传（optimizer → model）。
+  const state = new Map() // 0/undefined=未访问, 1=在栈上, 2=已完成
+  const back = new Set()
+  const dfs = (u) => {
+    state.set(u, 1)
+    for (const v of adj.get(u) || []) {
+      const st = state.get(v) || 0
+      if (st === 1) back.add(`${u}->${v}`)
+      else if (st === 0) dfs(v)
+    }
+    state.set(u, 2)
+  }
+  const indegAll = new Map(ids.map((id) => [id, 0]))
+  for (const e of rawEdges) indegAll.set(e.to, indegAll.get(e.to) + 1)
+  for (const id of ids) if ((indegAll.get(id) || 0) === 0 && (state.get(id) || 0) === 0) dfs(id)
+  for (const id of ids) if ((state.get(id) || 0) === 0) dfs(id)
+
+  const dagAdj = new Map(ids.map((id) => [id, []]))
+  const indeg = new Map(ids.map((id) => [id, 0]))
+  for (const e of rawEdges) {
+    if (back.has(`${e.from}->${e.to}`)) continue
+    dagAdj.get(e.from).push(e.to)
     indeg.set(e.to, indeg.get(e.to) + 1)
   }
+
   let frontier = ids.filter((id) => indeg.get(id) === 0)
   let level = 0
   let guard = 0
@@ -572,7 +605,7 @@ function assignLayers(nodes, edges) {
     for (const id of frontier) layer.set(id, level)
     const next = []
     for (const id of frontier) {
-      for (const v of adj.get(id)) {
+      for (const v of dagAdj.get(id)) {
         indeg.set(v, indeg.get(v) - 1)
         if (indeg.get(v) === 0) next.push(v)
       }
@@ -580,7 +613,23 @@ function assignLayers(nodes, edges) {
     frontier = next
     level++
   }
-  for (const id of ids) if (!layer.has(id)) layer.set(id, level)
+
+  // 兜底：还没分层的（理论上只在极端成环时出现）按前驱深度逐个往上推，别一股脑塞同一层
+  let changed = true
+  let rounds = 0
+  while (changed && rounds++ < ids.length + 2) {
+    changed = false
+    for (const id of ids) {
+      if (layer.has(id)) continue
+      const preds = rawEdges.filter((e) => e.to === id && layer.has(e.from)).map((e) => layer.get(e.from))
+      if (preds.length) {
+        layer.set(id, Math.max(...preds) + 1)
+        changed = true
+      }
+    }
+  }
+  const fallback = Math.max(0, ...layer.values()) + 1
+  for (const id of ids) if (!layer.has(id)) layer.set(id, fallback)
   return layer
 }
 
@@ -739,18 +788,23 @@ function routeEdge(a, b, opts = {}) {
     })
     return { points: [{ x: cxA, y: y1 }, { x: cxA, y: midY }, { x: cxB, y: midY }, { x: cxB, y: y2 }], straight: false }
   }
-  // 水平回向：从右侧绕出去（车道要留在画布内，否则导出会被裁）
+  // 水平回向（例如 Agent 的 replan、训练的梯度回传）：
+  // 从源节点底部下去，走「整条节点带下方」的车道，再从目标底部进入。
+  // 不能从右侧横着往回穿 —— 中间的节点会把线盖住，只剩缝隙里两截箭头。
   if (hBackward) {
-    let laneX = Math.max(a.x + a.w, b.x + b.w) + LANE_OFFSET_MM
-    if (bounds) laneX = Math.min(laneX, bounds.maxX - 0.6)
+    const all = [...obstacles, a, b].filter(Boolean)
+    const bandBottom = Math.max(...all.map((n) => n.y + n.h))
+    let laneY = bandBottom + LANE_OFFSET_MM
+    if (bounds) laneY = Math.min(laneY, bounds.maxY - 0.6)
     return {
       points: [
-        { x: a.x + a.w, y: cyA },
-        { x: laneX, y: cyA },
-        { x: laneX, y: cyB },
-        { x: b.x + b.w + ARROW_INSET_MM, y: cyB },
+        { x: cxA, y: a.y + a.h },
+        { x: cxA, y: laneY },
+        { x: cxB, y: laneY },
+        { x: cxB, y: b.y + b.h - ARROW_INSET_MM },
       ],
       straight: false,
+      back: true,
     }
   }
   // 垂直回向：从下方绕
@@ -1022,12 +1076,15 @@ function drawEdgeLabels(plan, ctx, yShift) {
     const midSeg = pathMidpoint(e.points)
     if (!midSeg) continue
     const fs = ctx.subFs
-    const gap = 1.0
+    // 短边（两节点挨得近）上的标签要把线让出来，否则白底会把箭头整段盖住
+    const wLabel = estimateTextWidthMm(e.label, fs)
+    const segLen = Number(midSeg.segLen) || 0
+    const gap = segLen < wLabel + 6 ? 2.6 : 1.0
     const mid = {
       x: midSeg.x + (midSeg.horizontal ? 0 : gap),
       y: midSeg.y + (midSeg.horizontal ? -gap : 0),
     }
-    const wText = estimateTextWidthMm(e.label, fs)
+    const wText = wLabel
     const bx = mid.x - wText / 2 - 0.7
     const by = mid.y + yShift - fs * PT_TO_MM * 0.86
     out.push(
@@ -1129,6 +1186,7 @@ function pathMidpoint(points) {
     x: seg.a.x + (seg.b.x - seg.a.x) * t,
     y: seg.a.y + (seg.b.y - seg.a.y) * t,
     horizontal: Math.abs(seg.b.x - seg.a.x) >= Math.abs(seg.b.y - seg.a.y),
+    segLen: seg.len,
   }
 }
 

@@ -1,0 +1,142 @@
+{
+  "type": "pipeline",
+  "journal": "nature",
+  "width": "double",
+  "height_mm": null,
+  "dpi": null,
+  "font": "Arial",
+  "font_size_pt": 7,
+  "palette": "okabe-ito",
+  "name": "rag-pipeline",
+  "caption": "图 1  检索增强生成流程。问题经双路检索召回候选文档，重排后拼装上下文，由大模型生成带引用的答案。",
+  "notes": "8 个节点是双栏宽度下的上限；单栏请删掉 n2（Query Rewrite）并跑 check 复核字号。",
+  "panels": [
+    {
+      "id": "a",
+      "title": "",
+      "caption": "",
+      "nodes": [
+        {
+          "id": "n1",
+          "label": "User Query",
+          "sub": "",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n2",
+          "label": "Query Rewrite",
+          "sub": "optional",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n3",
+          "label": "Hybrid Retriever",
+          "sub": "BM25 + dense",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n4",
+          "label": "Top-k Documents",
+          "sub": "k = 20",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n5",
+          "label": "Cross-Encoder Rerank",
+          "sub": "top-5",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n6",
+          "label": "Context Assembly",
+          "sub": "prompt template",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n7",
+          "label": "LLM Generation",
+          "sub": "with citations",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n8",
+          "label": "Answer",
+          "sub": "",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        }
+      ],
+      "edges": [
+        {
+          "from": "n1",
+          "to": "n2",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n2",
+          "to": "n3",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n3",
+          "to": "n4",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n4",
+          "to": "n5",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n5",
+          "to": "n6",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n6",
+          "to": "n7",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n7",
+          "to": "n8",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n1",
+          "to": "n3",
+          "label": "direct",
+          "kind": "dashed"
+        }
+      ]
+    }
+  ],
+  "layout": {
+    "direction": "left-right",
+    "gap_mm": 5,
+    "node_w_mm": 21,
+    "node_h_mm": 14
+  }
+}

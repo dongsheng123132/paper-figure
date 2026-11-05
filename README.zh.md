@@ -113,6 +113,29 @@ node scripts/fig.mjs concept ./fig1 --n 2         # 只有概念图/封面/TOC �
 
 ---
 
+## 样例（全部由本工具渲染，183mm 双栏 @300dpi）
+
+| Transformer 编码层 | Agent 架构 |
+|---|---|
+| ![transformer](examples/gallery/transformer-block.png) | ![agent](examples/gallery/agent-architecture.png) |
+
+| 训练与评测流程 |
+|---|
+| ![training](examples/gallery/training-pipeline.png) |
+
+## 9 种结构图，不用从空白画布开始
+
+`templates` 里是论文里最常见的 9 种结构，每种都按「正确读法」排好版：
+
+```bash
+node scripts/fig.mjs templates                                  # 列模板
+node scripts/fig.mjs new ./fig1 --template agent-architecture --journal nature
+node scripts/fig.mjs render ./fig1 && node scripts/fig.mjs check ./fig1
+```
+
+Transformer 编码层 · 编码器-解码器 · CNN 分类器 · GNN 消息传递 · RAG 流水线 · Agent 架构 · 训练与评测流程 · 缩放点积注意力 · 消融三联对比。
+每个模板自带中文图注草稿和「改哪里」说明；节点默认英文，投中文刊改 `label` 即可。
+
 ## 已经有图了？先体检，别重画
 
 合作者发你的 PNG、Origin 导的 PDF、别的工具出的 SVG，都能直接判「能不能投这本刊」：

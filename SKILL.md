@@ -4,7 +4,7 @@ slug: paper-figure
 displayName: "论文配图 · 可投稿版"
 display_name: "论文配图 · 可投稿版"
 display_name_en: "Paper Figure"
-version: "1.1.0"
+version: "1.2.0"
 author: "he fangsheng <hefangsheng@gmail.com>"
 license: MIT
 homepage: "https://github.com/u-claw-os/paper-figure"
@@ -64,6 +64,8 @@ examples_en:
 | `chart` | `data/*.csv` + figure.json 里的 data 段 → 期刊风格图表 SVG | `node scripts/fig.mjs chart ./fig1` |
 | `render` | `figure.json` → `out/<name>.svg`（pipeline/architecture/mechanism/comparison/concept/toc 排版） | `node scripts/fig.mjs render ./fig1 --journal nature` |
 | `check` | 确定性合规检查 → `out/check.json` + 人话报告（每条带 fix） | `node scripts/fig.mjs check ./fig1 --journal ieee` |
+| `templates` | 列结构图模板（9 个：Transformer / 编码器-解码器 / CNN / GNN / RAG / Agent / 训练流程 / 注意力 / 消融对比） | `node scripts/fig.mjs templates` |
+| `new` | 从模板建工作区（figure.json + brief.md + data/ + out/） | `node scripts/fig.mjs new ./fig1 --template rag-pipeline --journal ieee` |
 | `check --file` | **体检任意一张图**（PNG/JPEG/TIFF/PDF/SVG/EPS）→ 判它能不能投这本刊 | `node scripts/fig.mjs check --file ./coauthor-fig.pdf --journal nature` |
 | `export` | 按期刊规格导出 PNG/PDF/TIFF | `node scripts/fig.mjs export ./fig1 --formats png,pdf,tif --dpi 600` |
 | `concept` | AI 概念示意图/封面/TOC 草稿（默认 `gpt-image-2.5-1k`） | `node scripts/fig.mjs concept ./fig1 --n 2` |
@@ -71,6 +73,32 @@ examples_en:
 | `wallet` | 看密钥来源、余额、充值链接（只读，不花钱） | `node scripts/fig.mjs wallet` |
 
 典型一口气：`init → spec → render（或 chart）→ check → export`；`check` 全绿但还想知道"审稿人/编辑会挑什么"，再加 `review`；要封面/TOC 才用 `concept`。
+
+## 结构图模板包（v1.2）：9 种论文里最常见的结构
+
+不是让你从空白画布开始 —— 每种结构图在论文里都有固定读法，这里把**正确读法**做成模板，
+一条命令铺到工作区，改模块名就能出图：
+
+| 模板 id | 画什么 | 典型论文 |
+|---|---|---|
+| `transformer-block` | Transformer 编码层（注意力 + 残差 + 前馈） | NLP / 多模态 |
+| `encoder-decoder` | 编码器—解码器 / seq2seq（含交叉注意力） | 翻译、摘要、语音 |
+| `cnn-classifier` | CNN 分类器（卷积池化堆叠 + GAP） | CV / 医学影像 |
+| `gnn-message-passing` | GNN 消息传递（聚合 / 更新 / 读出 + 层间回边） | 图学习、分子 |
+| `rag-pipeline` | RAG（检索 → 重排 → 上下文 → 生成 + 引用） | 检索增强、问答 |
+| `agent-architecture` | Agent（规划器 / 工具 / 记忆 / 反思闭环） | LLM Agent、具身 |
+| `training-pipeline` | 训练与评测流程（含梯度回传虚线 + held-out 评估） | 任何实验章 |
+| `attention-qkv` | 缩放点积注意力（Q/K/V 三路 → softmax → 加权求和） | 机制解释 |
+| `ablation-comparison` | 消融三联面板（Baseline / +A / +A+B，结果数字自填） | 实验章标配 |
+
+```bash
+node scripts/fig.mjs templates                                  # 看全部模板
+node scripts/fig.mjs new ./fig1 --template rag-pipeline --journal nature
+node scripts/fig.mjs render ./fig1 && node scripts/fig.mjs check ./fig1
+```
+
+每个模板自带 `caption`（中文图注草稿）和 `notes`（这一版为什么这么画、改哪里）。
+节点默认英文（论文正文用英文），要投中文刊就把 `label` 换成中文，render 会自动重排。
 
 ## 已经在用别的工具画图？先体检（v1.1 新增）
 

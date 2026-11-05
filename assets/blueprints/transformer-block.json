@@ -1,0 +1,114 @@
+{
+  "type": "pipeline",
+  "journal": "nature",
+  "width": "double",
+  "height_mm": null,
+  "dpi": null,
+  "font": "Arial",
+  "font_size_pt": 7,
+  "palette": "okabe-ito",
+  "name": "transformer-block",
+  "caption": "图 1  Transformer 编码层结构。输入经位置编码后进入多头自注意力，残差连接与 LayerNorm 稳定训练，再经前馈网络输出。",
+  "notes": "改 n2 的 sub 写注意力头数；残差改为实线就把 kind 从 dashed 改成 arrow。若目标是中文期刊，把节点 label 换成中文即可。",
+  "panels": [
+    {
+      "id": "a",
+      "title": "",
+      "caption": "",
+      "nodes": [
+        {
+          "id": "n1",
+          "label": "Input Embedding",
+          "sub": "x ∈ R^{n×d}",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n2",
+          "label": "Multi-Head Attn",
+          "sub": "h = 8, d_k = 64",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n3",
+          "label": "Add & LN",
+          "sub": "LayerNorm",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n4",
+          "label": "Feed-Forward",
+          "sub": "d_ff = 4d",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n5",
+          "label": "Add & LN",
+          "sub": "LayerNorm",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n6",
+          "label": "Output",
+          "sub": "y ∈ R^{n×d}",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        }
+      ],
+      "edges": [
+        {
+          "from": "n1",
+          "to": "n2",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n2",
+          "to": "n3",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n3",
+          "to": "n4",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n4",
+          "to": "n5",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n5",
+          "to": "n6",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n1",
+          "to": "n3",
+          "label": "residual",
+          "kind": "dashed"
+        }
+      ]
+    }
+  ],
+  "layout": {
+    "direction": "left-right",
+    "gap_mm": 6,
+    "node_w_mm": 26,
+    "node_h_mm": 14
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "type": "pipeline",
+  "journal": "nature",
+  "width": "double",
+  "height_mm": null,
+  "dpi": null,
+  "font": "Arial",
+  "font_size_pt": 7,
+  "palette": "okabe-ito",
+  "name": "gnn-message-passing",
+  "caption": "图 1  图神经网络的消息传递。邻居节点的特征先聚合，再与自身表示一起更新，最后池化读出用于下游任务。",
+  "notes": "把聚合函数写在 n3 的 sub；多层就复制 n2–n4 三节点一组。",
+  "panels": [
+    {
+      "id": "a",
+      "title": "",
+      "caption": "",
+      "nodes": [
+        {
+          "id": "n1",
+          "label": "Neighborhood Features",
+          "sub": "h_v^{(l)}",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n2",
+          "label": "Message",
+          "sub": "M = A·H W",
+          "kind": "box",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n3",
+          "label": "Aggregate",
+          "sub": "sum / mean / max",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n4",
+          "label": "Update",
+          "sub": "MLP + residual",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n5",
+          "label": "Readout",
+          "sub": "mean ⊕ max",
+          "kind": "rounded",
+          "group": "a",
+          "color": null
+        },
+        {
+          "id": "n6",
+          "label": "Task Head",
+          "sub": "classification",
+          "kind": "box",
+          "group": "a",
+          "color": null
+        }
+      ],
+      "edges": [
+        {
+          "from": "n1",
+          "to": "n2",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n2",
+          "to": "n3",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n3",
+          "to": "n4",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n4",
+          "to": "n5",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n5",
+          "to": "n6",
+          "label": "",
+          "kind": "arrow"
+        },
+        {
+          "from": "n4",
+          "to": "n1",
+          "label": "layer l+1",
+          "kind": "dashed"
+        }
+      ]
+    }
+  ],
+  "layout": {
+    "direction": "left-right",
+    "gap_mm": 6,
+    "node_w_mm": 26,
+    "node_h_mm": 14
+  }
+}

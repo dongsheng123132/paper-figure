@@ -111,6 +111,27 @@ Every command writes JSON to stdout, human-readable progress to stderr, and on f
 
 ---
 
+## Samples (rendered by this tool, 183 mm double column @300dpi)
+
+| Transformer block | Agent architecture |
+|---|---|
+| ![transformer](examples/gallery/transformer-block.png) | ![agent](examples/gallery/agent-architecture.png) |
+
+| Training / evaluation pipeline |
+|---|
+| ![training](examples/gallery/training-pipeline.png) |
+
+## Nine structural blueprints, so you do not start from a blank canvas
+
+```bash
+node scripts/fig.mjs templates
+node scripts/fig.mjs new ./fig1 --template agent-architecture --journal nature
+node scripts/fig.mjs render ./fig1 && node scripts/fig.mjs check ./fig1
+```
+
+Transformer block · encoder–decoder · CNN classifier · GNN message passing · RAG pipeline · agent architecture · training/eval pipeline · scaled dot-product attention · three-panel ablation comparison.
+Each comes with a caption draft and notes on what to change; labels are English by default — switch them to Chinese for Chinese journals and the layout reflows.
+
 ## Already have a figure? Audit it instead of redrawing
 
 Figures you did not draw — a co-author's PNG, an Origin PDF, another tool's SVG — can be audited against a journal's spec:

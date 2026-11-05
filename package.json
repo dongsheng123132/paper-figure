@@ -1,6 +1,6 @@
 {
   "name": "paper-figure",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "description": "把「论文配图不好看」变成一条命令：结构图/数据图出期刊合规矢量图，多 AI 低价会审。零依赖。",
   "bin": {
@@ -14,8 +14,9 @@
     "spec": "node scripts/fig.mjs spec",
     "render": "node scripts/fig.mjs render",
     "chart": "node scripts/fig.mjs chart",
-    "test": "node tests/smoke.mjs && node tests/check-file.mjs && node scripts/lib/selftest.mjs",
-    "test:file": "node tests/check-file.mjs"
+    "test": "node tests/smoke.mjs && node tests/check-file.mjs && node tests/blueprints.mjs && node scripts/lib/selftest.mjs",
+    "test:file": "node tests/check-file.mjs",
+    "test:blueprints": "node tests/blueprints.mjs"
   },
   "engines": {
     "node": ">=18"
