@@ -4,7 +4,7 @@ slug: paper-figure
 displayName: "论文配图 · 可投稿版"
 display_name: "论文配图 · 可投稿版"
 display_name_en: "Paper Figure"
-version: "1.2.0"
+version: "1.3.0"
 author: "he fangsheng <hefangsheng@gmail.com>"
 license: MIT
 homepage: "https://github.com/u-claw-os/paper-figure"
@@ -67,12 +67,37 @@ examples_en:
 | `templates` | 列结构图模板（9 个：Transformer / 编码器-解码器 / CNN / GNN / RAG / Agent / 训练流程 / 注意力 / 消融对比） | `node scripts/fig.mjs templates` |
 | `new` | 从模板建工作区（figure.json + brief.md + data/ + out/） | `node scripts/fig.mjs new ./fig1 --template rag-pipeline --journal ieee` |
 | `check --file` | **体检任意一张图**（PNG/JPEG/TIFF/PDF/SVG/EPS）→ 判它能不能投这本刊 | `node scripts/fig.mjs check --file ./coauthor-fig.pdf --journal nature` |
+| `report` | 把 check / 会审结果导成导师能读的 HTML 报告（加 `--pdf` 出 A4 PDF） | `node scripts/fig.mjs report ./fig1 --pdf` |
 | `export` | 按期刊规格导出 PNG/PDF/TIFF | `node scripts/fig.mjs export ./fig1 --formats png,pdf,tif --dpi 600` |
 | `concept` | AI 概念示意图/封面/TOC 草稿（默认 `gpt-image-2.5-1k`） | `node scripts/fig.mjs concept ./fig1 --n 2` |
 | `review` | 多 AI 会审 → `out/review.json`（**先给修改清单**，分数仅参考） | `node scripts/fig.mjs review ./fig1 --tier econ` |
 | `wallet` | 看密钥来源、余额、充值链接（只读，不花钱） | `node scripts/fig.mjs wallet` |
 
 典型一口气：`init → spec → render（或 chart）→ check → export`；`check` 全绿但还想知道"审稿人/编辑会挑什么"，再加 `review`；要封面/TOC 才用 `concept`。
+
+## 中文刊 / 学位论文（v1.3，全部标「待核」）
+
+新增两个预置：`cn-core`（中文核心期刊通用）、`thesis-cn`（中文学位论文，已补全图注与中文字体规则）。区别不在排版，而在**图注**和**字体**：
+
+| 检查 code | 什么时候报 | 级别 |
+|---|---|---|
+| `CAPTION_MISSING` | `figure.json` 里没有 `caption` | warn |
+| `CAPTION_NUMBER_STYLE` | 图注编号不符合目标格式（学位论文常见 `图 3-1`，中文刊常见 `图 3`） | warn |
+| `CAPTION_BILINGUAL_MISSING` | 学位论文常要求中英双语，但没写 `caption_en` | warn |
+| `FONT_CJK_NOT_ACCEPTED` | 图里有中文，字体族里没有宋体/黑体这类可接受的中文字体 | warn |
+| `JOURNAL_PRESET_UNVERIFIED` | 用的是标「待核」的预置（中文刊/学位论文属于此类） | warn |
+
+**为什么全是 warn**：中文期刊没有统一国标、各校学位论文规范各写各的，手上没有「某校某一版」原文。这些规则只提示、不判死，报告里「规则来源」会写清出处待核。
+
+## 报告导出（v1.3）
+
+```bash
+node scripts/fig.mjs report ./fig1            # → out/report.html（自包含，可直接发微信/邮件）
+node scripts/fig.mjs report ./fig1 --pdf      # → out/report.pdf（A4，给导师看）
+```
+
+顺序：结论判词 → 图 → 确定性检查表（级别/code/问题/怎么改）→ 多 AI 会审的**修改清单**（清单在前、分数在后）→ 规则来源与免责。
+样式与图都内联在 HTML 里，文件移到任何电脑都不丢资源；没有 Chrome 时只出 HTML 并说明原因。
 
 ## 结构图模板包（v1.2）：9 种论文里最常见的结构
 

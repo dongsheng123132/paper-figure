@@ -111,6 +111,18 @@ Every command writes JSON to stdout, human-readable progress to stderr, and on f
 
 ---
 
+## Chinese journals / theses, and shareable reports (v1.3)
+
+```bash
+node scripts/fig.mjs new ./fig1 --template transformer-block --journal thesis-cn
+node scripts/fig.mjs render ./fig1 && node scripts/fig.mjs check ./fig1
+node scripts/fig.mjs report ./fig1 --pdf
+```
+
+- New presets `cn-core` (Chinese core journals) and `thesis-cn` (Chinese theses), plus five deterministic checks: missing caption, caption numbering style, missing English caption, CJK font not accepted, and an explicit "preset not verified" notice.
+- All of them are **warnings, not errors**: there is no national standard for Chinese journals and every university writes its own thesis rules, so the checker flags and explains instead of failing the figure.
+- `report` writes a self-contained HTML (styles and figure inlined) and, with `--pdf`, an A4 PDF when Chrome is available.
+
 ## Samples (rendered by this tool, 183 mm double column @300dpi)
 
 | Transformer block | Agent architecture |

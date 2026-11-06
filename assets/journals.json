@@ -302,6 +302,68 @@
       ]
     },
     {
+      "id": "cn-core",
+      "label": "中文核心期刊（通用）",
+      "aliases": [
+        "中文核心",
+        "中文期刊",
+        "国内期刊",
+        "CN 期刊"
+      ],
+      "single_mm": 140,
+      "onehalf_mm": 155,
+      "double_mm": 170,
+      "max_height_mm": 200,
+      "min_font_pt": 8,
+      "dpi": 600,
+      "formats": [
+        "pdf",
+        "tif",
+        "png"
+      ],
+      "fonts": [
+        "宋体",
+        "黑体",
+        "Times New Roman",
+        "Arial"
+      ],
+      "color_mode": "rgb",
+      "caption": {
+        "pattern": "^图\\s*\\d+",
+        "example": "图 3  方法总体框架",
+        "bilingual": false,
+        "lang": "zh",
+        "note": "中文期刊图注多为「图 N  说明」，双语图注不是普遍要求。",
+        "source": "待核：目标期刊投稿指南",
+        "verified": "待核"
+      },
+      "cjk_fonts": [
+        "宋体",
+        "黑体",
+        "SimSun",
+        "SimHei",
+        "微软雅黑",
+        "Microsoft YaHei",
+        "PingFang SC"
+      ],
+      "cjk_note": "中文期刊多用宋体正文/黑体强调，具体以该刊模板为准。",
+      "notes": "中文核心期刊的版心与字号差异很大（多数双栏 170mm 左右、图内中文字号不小于小五）。本预置是「常见值」，不是任何一本刊的规定；投稿前按目标刊模板核对。",
+      "source": "待核：以目标期刊《投稿须知》为准",
+      "verified": "待核",
+      "verified_note": "全字段待核：中文期刊没有统一国标，check 只提示、不据此判死。",
+      "unverified_fields": [
+        "single_mm",
+        "onehalf_mm",
+        "double_mm",
+        "max_height_mm",
+        "min_font_pt",
+        "dpi",
+        "formats",
+        "fonts",
+        "caption"
+      ]
+    },
+    {
       "id": "thesis-cn",
       "label": "中文学位论文（通用）",
       "aliases": [
@@ -339,7 +401,27 @@
         "min_font_pt",
         "dpi",
         "formats"
-      ]
+      ],
+      "caption": {
+        "pattern": "^图\\s*\\d+([-.–]\\d+)?",
+        "example": "图 3-1  方法总体框架",
+        "bilingual": true,
+        "lang": "zh",
+        "note": "多数院校要求「图 章号-序号」编号，且中英文图注并列；具体格式以本校《学位论文撰写规范》为准。",
+        "source": "待核：各校研究生院《学位论文撰写规范》",
+        "verified": "待核"
+      },
+      "cjk_fonts": [
+        "宋体",
+        "黑体",
+        "SimSun",
+        "SimHei",
+        "微软雅黑",
+        "Microsoft YaHei",
+        "PingFang SC",
+        "Noto Sans CJK SC"
+      ],
+      "cjk_note": "中文标签常用宋体/黑体；英文与数字常配 Times New Roman。字体清单本身也是待核项。"
     },
     {
       "id": "custom",

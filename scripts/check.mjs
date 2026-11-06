@@ -95,6 +95,12 @@ export const FALLBACK_JOURNALS = {
     min_font_pt: 8, dpi: 300, formats: ['tif', 'eps'], fonts: ['Arial', 'Times New Roman', 'Symbol'],
     color_mode: 'rgb', notes: '图宽 66.8–190.5mm（789–2250px@300dpi）；字号 ≥8pt；推荐 TIFF/EPS'
   },
+  'cn-core': {
+    label: '中文核心期刊（通用）', single_mm: 140, double_mm: 170, max_height_mm: 200,
+    min_font_pt: 8, dpi: 600, formats: ['pdf', 'tif', 'png'],
+    fonts: ['宋体', '黑体', 'Times New Roman', 'Arial'], color_mode: 'rgb',
+    source: '待核：以目标期刊《投稿须知》为准', verified: '待核',
+  },
   'thesis-cn': {
     id: 'thesis-cn', label: '中文学位论文（通用）', single_mm: 80, double_mm: 170, max_height_mm: 200,
     min_font_pt: 9, dpi: 600, formats: ['pdf', 'png', 'tif'],
@@ -991,7 +997,14 @@ function normalizePreset(p, id) {
     fonts: Array.isArray(p.fonts) && p.fonts.length ? p.fonts : base.fonts,
     color_mode: p.color_mode || base.color_mode,
     notes: p.notes || base.notes,
-    source: p.source || (base.source || '')
+    source: p.source || (base.source || ''),
+    // 中文刊/学位论文专用：图注规则、中文字体清单、核实状态
+    caption: p.caption && typeof p.caption === 'object' ? { ...p.caption } : null,
+    cjk_fonts: Array.isArray(p.cjk_fonts) ? p.cjk_fonts.map(String) : null,
+    cjk_note: p.cjk_note || '',
+    verified: p.verified || base.verified || null,
+    verified_note: p.verified_note || '',
+    unverified_fields: Array.isArray(p.unverified_fields) ? p.unverified_fields : []
   }
 }
 
@@ -1076,6 +1089,35 @@ export async function checkFigure(workDir, opts = {}) {
   } else if (preset.id !== journalId) {
     add('warn', 'UNKNOWN_JOURNAL', `没有「${journalId}」这个期刊预置，已按通用值（${preset.label}）检查。`,
       `用 --journal 指定已支持的期刊；可用值：nature / science / cell / ieee / elsevier / springer / acm / plos / thesis-cn / custom。`)
+  }
+
+  // 中文刊/学位论文这类预置是「常见值」，不是任何官方硬规定 —— 必须显式告知
+  if (preset.verified === '待核') {
+    add('warn', 'JOURNAL_PRESET_UNVERIFIED',
+      `${preset.label} 的规格标的是「待核」：这些数字是常见值，不是任何一本刊/任何一所学校的硬规定。`,
+      `投稿/送审前对一遍 ${preset.source || preset.notes || '目标单位的最新规范'}；这条 check 只提示，不据此判死。`)
+  }
+
+  /* ---- 图注（中文刊/学位论文常查，英文刊也建议写） ---- */
+  const captionText = String((spec && spec.caption) || '').trim()
+  const captionEn = String((spec && (spec.caption_en || spec.captionEn)) || '').trim()
+  if (!captionText) {
+    add('warn', 'CAPTION_MISSING',
+      'figure.json 里没有 caption（图注）—— 图注是编辑部判断「这张图在讲什么」的第一依据，缺了容易被要求补。',
+      '在 figure.json 里补一句 caption：一句说清这张图支撑正文哪句话，别只写「实验结果」。')
+  } else if (preset.caption && preset.caption.pattern) {
+    let re = null
+    try { re = new RegExp(preset.caption.pattern) } catch { re = null }
+    if (re && !re.test(captionText)) {
+      add('warn', 'CAPTION_NUMBER_STYLE',
+        `图注「${captionText.slice(0, 30)}」不符合 ${preset.label} 的编号风格（期望形如「${preset.caption.example || '图 1  说明'}」）。`,
+        `按目标格式改 figure.json 的 caption。${preset.caption.note || ''}（来源：${preset.caption.source || '待核'}）`)
+    }
+  }
+  if (preset.caption && preset.caption.bilingual && !captionEn) {
+    add('warn', 'CAPTION_BILINGUAL_MISSING',
+      `${preset.label} 常见做法是中英文图注并列，figure.json 里没有 caption_en。`,
+      '补一个英文图注 caption_en（一句即可）；不确定本校是否要求就问一遍研究生院/导师，别默认不需要。')
   }
 
   const svgPath = pickSvg(wd, spec, opts)
@@ -1357,6 +1399,19 @@ export async function checkFigure(workDir, opts = {}) {
 
   /* ---------------- ⑥ 字体 ---------------- */
   if (svg) {
+    if (preset.cjk_fonts && preset.cjk_fonts.length) {
+      const hasCjk = Boolean(svg.hasCjkText) || (svg.texts || []).some((t) => /[\u4e00-\u9fff]/.test(t.content || ''))
+      if (hasCjk) {
+        const fams = [...(svg.fontFamilies || [])].map((f) => String(f).toLowerCase())
+        const accepted = preset.cjk_fonts.map((f) => String(f).toLowerCase())
+        if (fams.length && !fams.some((fam) => accepted.some((a) => fam.includes(a)))) {
+          add('warn', 'FONT_CJK_NOT_ACCEPTED',
+            `图里有中文，但字体族里没有 ${preset.label} 常见的中文字体（${preset.cjk_fonts.slice(0, 3).join(' / ')}…）；当前用的是 ${fams.join('、')}。`,
+            `在 figure.json 的 font 里换成一个中文字体（或写成「Arial, 宋体」这种回退链）再 render。${preset.cjk_note || ''}`)
+        }
+      }
+    }
+
     const families = new Set(svg.fontFamilies)
     if (spec && spec.font) families.add(normFamily(spec.font))
     const acceptedRaw = preset.fonts || []

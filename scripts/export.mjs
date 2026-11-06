@@ -422,6 +422,40 @@ function pdfInfo(path) {
   } catch { return null }
 }
 
+/**
+ * 把任意本地 HTML 打印成 PDF（给 report 用：A4 报告）。
+ * @param {{htmlPath:string,pdfPath:string,timeoutMs?:number}} opts
+ * @returns {Promise<{ok:boolean,path?:string,pages?:number|null,reason?:string,skipped?:boolean}>}
+ */
+export async function htmlToPdf({ htmlPath, pdfPath, timeoutMs = 120000 } = {}) {
+  const r = detectRasterizer()
+  if (r.name !== 'chrome') {
+    return {
+      ok: false,
+      skipped: true,
+      reason: '本机没有 Chrome，报告只能给 HTML；在浏览器里打开后 Ctrl/Cmd+P 另存为 PDF 效果一样。'
+    }
+  }
+  const tmpRoot = mkdtempSync(join(tmpdir(), 'pf-print-'))
+  const chrome = {
+    path: r.path,
+    userDataDir: join(tmpRoot, 'chrome-profile'),
+    crashDir: join(tmpRoot, 'chrome-crash'),
+  }
+  try {
+    mkdirSync(chrome.userDataDir, { recursive: true })
+    mkdirSync(chrome.crashDir, { recursive: true })
+    const res = chromePdf(chrome, { htmlPath, outPath: pdfPath, timeoutMs })
+    if (existsSync(pdfPath) && statSync(pdfPath).size > 1000) {
+      const info = pdfInfo(pdfPath)
+      return { ok: true, path: pdfPath, pages: info ? info.pages : null, box: info ? info.box : null }
+    }
+    return { ok: false, reason: `Chrome 打印失败：${(res && res.output ? res.output : '没有输出').slice(0, 200)}` }
+  } finally {
+    try { rmSync(tmpRoot, { recursive: true, force: true }) } catch { /* ignore */ }
+  }
+}
+
 /* ==========================================================================
  * 五、各种格式的导出实现
  * ========================================================================== */

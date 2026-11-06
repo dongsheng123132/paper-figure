@@ -113,6 +113,21 @@ node scripts/fig.mjs concept ./fig1 --n 2         # 只有概念图/封面/TOC �
 
 ---
 
+## 中文刊 / 学位论文 + 报告导出（v1.3）
+
+```bash
+# 中文学位论文：图注要求「图 3-1」编号 + 中英双语 + 宋体/黑体
+node scripts/fig.mjs new ./fig1 --template transformer-block --journal thesis-cn
+node scripts/fig.mjs render ./fig1 && node scripts/fig.mjs check ./fig1
+
+# 给导师/合作者的体检报告（自包含 HTML，加 --pdf 出 A4）
+node scripts/fig.mjs report ./fig1 --pdf
+```
+
+- `cn-core`（中文核心期刊）与 `thesis-cn`（学位论文）新增 5 条确定性检查：图注缺失、编号风格、缺英文图注、中文字体、预置待核提示。
+- 这些规则**全部是 warn 不是 error**：中文期刊没有统一国标、各校规范各写各的，规则只提示、不判死，并在报告里写明「出处待核」。
+- 报告是自包含 HTML（样式与图都内联），移到别的电脑也不丢资源；`--pdf` 需要本机有 Chrome。
+
 ## 样例（全部由本工具渲染，183mm 双栏 @300dpi）
 
 | Transformer 编码层 | Agent 架构 |

@@ -32,6 +32,7 @@ const HELP = {
     { cmd: 'check <dir>', what: '确定性合规检查 → out/check.json + 人话报告', cost: '免费' },
     { cmd: 'check --file <图>', what: '体检任意一张图（PNG/JPEG/TIFF/PDF/SVG/EPS）：能不能投这本刊', cost: '免费' },
     { cmd: 'export <dir>', what: '按期刊规格导出 png/pdf/tif', cost: '免费' },
+    { cmd: 'report <dir>', what: '把 check/review 结果导成导师可读的 HTML 报告（加 --pdf 出 A4 PDF）', cost: '免费' },
     { cmd: 'concept <dir>', what: 'AI 概念示意图（gpt-image-2.5-1k）', cost: '约 ¥0.03/张' },
     { cmd: 'review <dir>', what: '多 AI 会审 → out/review.json', cost: '约 ¥0.01–0.07/轮' },
     { cmd: 'wallet', what: '看密钥来源 + 余额（只读）', cost: '免费' },
@@ -292,6 +293,21 @@ async function cmdCheck(args) {
   return { ...r, checkedSvg: (r && r.checkedSvg) || svgPath || null }
 }
 
+async function cmdReport(args) {
+  const dir = resolve(args._[0] || '.')
+  const mod = await loadTool('report', 'buildReport')
+  log(`生成报告：${dir}`)
+  const r = await mod.buildReport(dir, {
+    pdf: Boolean(args.flags.pdf),
+    out: pickStr(args.flags.out),
+    timeoutMs: pickNum(args.flags.timeout)
+  })
+  log(`HTML: ${r.htmlPath}`)
+  if (r.pdfPath) log(`PDF: ${r.pdfPath}`)
+  if (r.notes && r.notes.length) for (const n of r.notes) log(`注意：${n}`)
+  return r
+}
+
 async function cmdExport(args) {
   const dir = resolve(args._[0] || '.')
   const mod = await loadTool('export', 'exportFigure')
@@ -400,6 +416,7 @@ const COMMANDS = {
   render: cmdRender,
   chart: cmdChart,
   check: cmdCheck,
+  report: cmdReport,
   export: cmdExport,
   concept: cmdConcept,
   review: cmdReview,
