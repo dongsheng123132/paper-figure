@@ -129,9 +129,13 @@ node scripts/fig.mjs report ./fig1 --pdf
 |---|---|
 | ![transformer](examples/gallery/transformer-block.png) | ![agent](examples/gallery/agent-architecture.png) |
 
-| Training / evaluation pipeline |
+| Training / evaluation pipeline | RAG pipeline |
+|---|---|
+| ![training](examples/gallery/training-pipeline.png) | ![rag](examples/gallery/rag-pipeline.png) |
+
+| Data figure (CSV → journal-style bars) |
 |---|
-| ![training](examples/gallery/training-pipeline.png) |
+| ![chart](examples/gallery/chart-demo.png) |
 
 ## Nine structural blueprints, so you do not start from a blank canvas
 

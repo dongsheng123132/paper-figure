@@ -134,9 +134,13 @@ node scripts/fig.mjs report ./fig1 --pdf
 |---|---|
 | ![transformer](examples/gallery/transformer-block.png) | ![agent](examples/gallery/agent-architecture.png) |
 
-| 训练与评测流程 |
+| 训练与评测流程 | RAG 流水线 |
+|---|---|
+| ![training](examples/gallery/training-pipeline.png) | ![rag](examples/gallery/rag-pipeline.png) |
+
+| 数据图（CSV → 期刊风格柱状图） |
 |---|
-| ![training](examples/gallery/training-pipeline.png) |
+| ![chart](examples/gallery/chart-demo.png) |
 
 ## 9 种结构图，不用从空白画布开始
 

@@ -296,7 +296,11 @@ export function normalizeSpec(raw, ctx = {}) {
   out.font_size_pt = clampNum(raw.font_size_pt, 4, 24, Math.max(6, Number(preset.min_font_pt) || 7))
   out.palette = normalizePalette(raw.palette, warnings)
   out.caption = typeof raw.caption === 'string' ? raw.caption.trim() : ''
+  out.caption_en = typeof raw.caption_en === 'string' ? raw.caption_en.trim() : ''
   out.notes = typeof raw.notes === 'string' ? raw.notes.trim() : ''
+  // 视觉风格：minimal = 白底细黑框（默认，最接近期刊插图）；accent = 用色块强调（旧版观感）
+  const styleRaw = String(raw.style || '').trim().toLowerCase()
+  out.style = ['minimal', 'accent', 'muted'].includes(styleRaw) ? styleRaw : 'minimal'
 
   const panelRes = normalizePanels(raw.panels, raw.nodes, raw.edges, warnings)
   out.panels = panelRes.panels

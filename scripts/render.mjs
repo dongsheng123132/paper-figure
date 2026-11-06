@@ -118,6 +118,7 @@ export async function renderFigure(workDir, opts = {}) {
     layout: spec.layout,
     type: spec.type,
     fontFamily: fontName || 'Arial',
+    style: spec.style || 'minimal',
     warnings,
   }
   const maxFont = Number(preset.max_font_pt) || ctx.fs
@@ -758,6 +759,24 @@ function routeEdge(a, b, opts = {}) {
   if (hForward && (yOverlap || !vForward || Math.abs(cyB - cyA) < b.h)) {
     const x1 = a.x + a.w
     const x2 = b.x - ARROW_INSET_MM
+    // 跳线（例如 n1→n3 跳过中间模块）：直线会横穿中间的节点，
+    // 改走节点带下方车道，标签也就落在空白处。
+    if (!segmentClearX(cyA, x1, b.x, obstacles)) {
+      const all = [...obstacles, a, b].filter(Boolean)
+      const bandBottom = Math.max(...all.map((n) => n.y + n.h))
+      let laneY = bandBottom + LANE_OFFSET_MM
+      if (bounds) laneY = Math.min(laneY, bounds.maxY - 0.6)
+      return {
+        points: [
+          { x: cxA, y: a.y + a.h },
+          { x: cxA, y: laneY },
+          { x: cxB, y: laneY },
+          { x: cxB, y: b.y + b.h - ARROW_INSET_MM },
+        ],
+        straight: false,
+        back: true,
+      }
+    }
     if (Math.abs(cyB - cyA) < 0.15) return { points: [{ x: x1, y: cyA }, { x: x2, y: cyB }], straight: true }
     const midX = pickLane({
       axis: 'x',
@@ -968,22 +987,29 @@ function drawNodes(plan, ctx, yShift) {
     const colorIdx = Number.isFinite(n.paletteIndex) ? n.paletteIndex : 0
     const color = n.color || panelColor(ctx.palette, colorIdx)
     colorMemo.set(n.id, color)
-    const fill = tint(color, 0.9)
     const y = n.y + yShift
     const m = n.measure
 
+    // 视觉风格：minimal = 期刊插图感的白底细框（默认）；accent = 用面板颜色做淡色块
+    const minimal = ctx.style === 'minimal'
+    const fill = minimal
+      ? (n.kind === 'note' ? tint(color, 0.94) : n.kind === 'box' ? '#f7f8fa' : '#ffffff')
+      : tint(color, 0.9)
+    const strokeColor = minimal ? (n.kind === 'note' ? color : '#2f3438') : color
+    const strokeWidth = minimal ? SW.node * 0.72 : SW.node
+
     let shape = ''
-    const outline = { stroke: color, sw: SW.node }
+    const outline = { stroke: strokeColor, sw: strokeWidth }
     if (n.kind === 'box') {
-      shape = rect({ x: n.x, y, w: n.w, h: n.h, fill, stroke: color, sw: SW.node })
+      shape = rect({ x: n.x, y, w: n.w, h: n.h, fill, stroke: strokeColor, sw: strokeWidth })
     } else if (n.kind === 'circle') {
-      shape = rect({ x: n.x, y, w: n.w, h: n.h, rx: Math.min(n.w, n.h) / 2, fill, stroke: color, sw: SW.node })
+      shape = rect({ x: n.x, y, w: n.w, h: n.h, rx: Math.min(n.w, n.h) / 2, fill, stroke: strokeColor, sw: strokeWidth })
     } else if (n.kind === 'db') {
       shape = cylinderPath(n.x, y, n.w, n.h, fill, outline.stroke, outline.sw)
     } else if (n.kind === 'note') {
       shape = notePath(n.x, y, n.w, n.h, fill, outline.stroke, outline.sw)
     } else {
-      shape = rect({ x: n.x, y, w: n.w, h: n.h, rx: 1.6, fill, stroke: color, sw: SW.node })
+      shape = rect({ x: n.x, y, w: n.w, h: n.h, rx: 1.4, fill, stroke: strokeColor, sw: strokeWidth })
     }
 
     // 文字：整块垂直居中
@@ -1067,6 +1093,26 @@ function drawEdges(plan, ctx, yShift) {
   return group({ attrs: { 'data-role': 'edges' } }, out.join(''))
 }
 
+/** 沿折线取 t（0~1，按弧长）处的点 */
+function pathAt(points, t) {
+  if (!points || points.length < 2) return { x: 0, y: 0 }
+  const segs = []
+  let total = 0
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1]
+    const b = points[i]
+    const len = Math.hypot(b.x - a.x, b.y - a.y)
+    segs.push({ a, b, len, start: total })
+    total += len
+  }
+  const target = total * Math.max(0, Math.min(1, t))
+  const seg = segs.find((sg) => target >= sg.start && target <= sg.start + sg.len) || segs[segs.length - 1]
+  const k = seg.len > 1e-6 ? (target - seg.start) / seg.len : 0
+  return { x: seg.a.x + (seg.b.x - seg.a.x) * k, y: seg.a.y + (seg.b.y - seg.a.y) * k }
+}
+
+function round2(v) { return Math.round(Number(v) * 100) / 100 }
+
 function drawEdgeLabels(plan, ctx, yShift) {
   const out = []
   for (const e of plan.edges) {
@@ -1080,9 +1126,25 @@ function drawEdgeLabels(plan, ctx, yShift) {
     const wLabel = estimateTextWidthMm(e.label, fs)
     const segLen = Number(midSeg.segLen) || 0
     const gap = segLen < wLabel + 6 ? 2.6 : 1.0
-    const mid = {
+    let mid = {
       x: midSeg.x + (midSeg.horizontal ? 0 : gap),
       y: midSeg.y + (midSeg.horizontal ? -gap : 0),
+    }
+    // 标签压到节点上（跳线/回边常见）就沿路径挪位置，再不行抬到节点带上方
+    const labelW = wLabel + 1.4
+    const labelH = fs * PT_TO_MM * 1.25 + 0.5
+    const hit = (cx, cy) =>
+      (plan.nodes || []).some((n) => {
+        const pad = 0.6
+        return cx + labelW / 2 > n.x - pad && cx - labelW / 2 < n.x + n.w + pad && cy + labelH / 2 > n.y - pad && cy - labelH / 2 < n.y + n.h + pad
+      })
+    if (hit(mid.x, mid.y)) {
+      const cands = []
+      for (const t of [0.25, 0.75, 0.4, 0.6]) cands.push({ x: pathAt(e.points, t).x, y: pathAt(e.points, t).y - gap })
+      const bandTop = Math.min(...(plan.nodes || []).map((n) => n.y)) - labelH / 2 - 1.2
+      cands.push({ x: midSeg.x, y: bandTop })
+      const pick = cands.find((c) => !hit(c.x, c.y))
+      if (pick) mid = pick
     }
     const wText = wLabel
     const bx = mid.x - wText / 2 - 0.7
